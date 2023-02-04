@@ -69,7 +69,6 @@ private:
     D3D12_RECT subScissor;
 
     ModelInstance m_ModelInst;
-    ModelInstance m_AnotherModel;
     ShadowCamera m_SunShadow;
 };
 
@@ -193,18 +192,18 @@ void ModelViewer::Startup(void)
     }
     else
     {
-        m_AnotherModel = Renderer::LoadModel(L"ABeautifulGame/ABeautifulGame/glTF/ABeautifulGame.gltf", forceRebuild);
         m_ModelInst.LoopAllAnimations();
-        m_ModelInst = Renderer::LoadModel(L"helmat/DamagedHelmet.gltf", forceRebuild);
-
+        m_ModelInst = Renderer::LoadModel(L"../Resources/Blocks/grass/scene.gltf", forceRebuild);
         MotionBlur::Enable = false;
-
         //Lighting::CreateRandomLights(m_ModelInst.m_Model->m_BoundingBox.GetMin(),m_ModelInst.m_Model->m_BoundingBox.GetMax());
     }
 
     m_Camera.SetZRange(1.0f, 10000.0f);
     if (gltfFileName.size() == 0)
+    {
         m_CameraController.reset(new FlyingFPSCamera(m_Camera, Vector3(kYUnitVector)));
+        m_CameraController.reset(new OrbitCamera(m_Camera, m_ModelInst.GetBoundingSphere(), Vector3(kYUnitVector)));
+    }
     else
         m_CameraController.reset(new OrbitCamera(m_Camera, m_ModelInst.GetBoundingSphere(), Vector3(kYUnitVector)));
 }
@@ -213,7 +212,6 @@ void ModelViewer::Cleanup(void)
 {
     std::cout << "clean up" << std::endl;
     m_ModelInst = nullptr;
-    m_AnotherModel = nullptr;
 
     g_IBLTextures.clear();
 
@@ -240,7 +238,6 @@ void ModelViewer::Update(float deltaT)
     GraphicsContext& gfxContext = GraphicsContext::Begin(L"Scene Update");
 
     m_ModelInst.Update(gfxContext, deltaT);
-    m_AnotherModel.Update(gfxContext, deltaT);
 
     gfxContext.Finish();
 
@@ -319,6 +316,8 @@ void ModelViewer::RenderScene(void)
     sorter.SetDepthStencilTarget(g_SceneDepthBuffer);
     sorter.AddRenderTarget(g_SceneColorBuffer);
 
+    m_ModelInst.Render(sorter);
+    
     sorter.Sort();
     {
         ScopedTimer _prof(L"Depth Pre-Pass", gfxContext);
@@ -338,6 +337,8 @@ void ModelViewer::RenderScene(void)
             shadowSorter.SetCamera(m_Camera);
             shadowSorter.SetDepthStencilTarget(g_ShadowBuffer);
 
+            m_ModelInst.Render(shadowSorter);
+            
             shadowSorter.Sort();
 
             shadowSorter.RenderMeshes(MeshSorter::kZPass, gfxContext, globals, m_SunShadow.GetViewProjMatrix());
