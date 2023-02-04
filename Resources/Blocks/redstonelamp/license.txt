@@ -1,0 +1,11 @@
+Model Information:
+* title:	Minecraft Redstone Lamp
+* source:	https://sketchfab.com/3d-models/minecraft-redstone-lamp-b8034a7099584601b6922166d461585c
+* author:	Mareon (https://sketchfab.com/mareoncz)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Minecraft Redstone Lamp" (https://sketchfab.com/3d-models/minecraft-redstone-lamp-b8034a7099584601b6922166d461585c) by Mareon (https://sketchfab.com/mareoncz) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

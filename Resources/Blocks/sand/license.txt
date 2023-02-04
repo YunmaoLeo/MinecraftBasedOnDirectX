@@ -1,0 +1,11 @@
+Model Information:
+* title:	Minecraft Block Sand]
+* source:	https://sketchfab.com/3d-models/minecraft-block-sand-0525652a01ef405f85dafc92fb003223
+* author:	BlueWolf7777 (https://sketchfab.com/BlueWolf7777)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Minecraft Block Sand]" (https://sketchfab.com/3d-models/minecraft-block-sand-0525652a01ef405f85dafc92fb003223) by BlueWolf7777 (https://sketchfab.com/BlueWolf7777) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

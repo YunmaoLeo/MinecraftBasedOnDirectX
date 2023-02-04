@@ -1,0 +1,11 @@
+Model Information:
+* title:	Minecraft: Diamond Ore
+* source:	https://sketchfab.com/3d-models/minecraft-diamond-ore-a43e145e225748db9ee68d4baa14fa95
+* author:	impface (https://sketchfab.com/impface)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Minecraft: Diamond Ore" (https://sketchfab.com/3d-models/minecraft-diamond-ore-a43e145e225748db9ee68d4baa14fa95) by impface (https://sketchfab.com/impface) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

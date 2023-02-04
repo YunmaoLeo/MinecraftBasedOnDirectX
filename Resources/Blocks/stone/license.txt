@@ -1,0 +1,11 @@
+Model Information:
+* title:	Minecraft-stone-block
+* source:	https://sketchfab.com/3d-models/minecraft-stone-block-3678d5fd71c2413d82b8891282945510
+* author:	momo (https://sketchfab.com/momo_Ernst)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Minecraft-stone-block" (https://sketchfab.com/3d-models/minecraft-stone-block-3678d5fd71c2413d82b8891282945510) by momo (https://sketchfab.com/momo_Ernst) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

@@ -1,0 +1,11 @@
+Model Information:
+* title:	minecraft_dirt_block_staytrue_resourcepack
+* source:	https://sketchfab.com/3d-models/minecraft-dirt-block-staytrue-resourcepack-37e5d21b9db24c2fa1e88b6edd3e2dea
+* author:	StrictArtist166 (https://sketchfab.com/StrictArtist166)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "minecraft_dirt_block_staytrue_resourcepack" (https://sketchfab.com/3d-models/minecraft-dirt-block-staytrue-resourcepack-37e5d21b9db24c2fa1e88b6edd3e2dea) by StrictArtist166 (https://sketchfab.com/StrictArtist166) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
