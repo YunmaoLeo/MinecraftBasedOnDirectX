@@ -84,9 +84,6 @@ NumVar g_SunOrientation("Viewer/Lighting/Sun Orientation", -0.5f, -100.0f, 100.0
 NumVar g_SunInclination("Viewer/Lighting/Sun Inclination", 0.75f, 0.0f, 1.0f, 0.01f);
 NumVar ModelUnitSize("Model/Unit Size", 500.0f, 100.0f, 1000.0f, 100.0f);
 
-vector<Vector3> world = vector<Vector3>();
-vector<ModelInstance> blocks = vector<ModelInstance>();
-
 void ChangeIBLSet(EngineVar::ActionType);
 void ChangeIBLBias(EngineVar::ActionType);
 
@@ -200,16 +197,6 @@ void ModelViewer::Startup(void)
         m_ModelInst.LoopAllAnimations();
         m_ModelInst = Renderer::LoadModel(L"helmat/DamagedHelmet.gltf", forceRebuild);
 
-
-        for (int x = -10; x < 10; x++)
-        {
-            world.push_back(Vector3((float)x, 0, 0));
-            ModelInstance model = ModelInstance(m_ModelInst);
-            //model = Renderer::LoadModel(L"Cube/Cube.gltf", false);
-            model.Translate(Vector3((float)x * 1000.0f, 0, 0));
-            blocks.push_back(model);
-        }
-
         MotionBlur::Enable = false;
 
         //Lighting::CreateRandomLights(m_ModelInst.m_Model->m_BoundingBox.GetMin(),m_ModelInst.m_Model->m_BoundingBox.GetMax());
@@ -227,10 +214,6 @@ void ModelViewer::Cleanup(void)
     std::cout << "clean up" << std::endl;
     m_ModelInst = nullptr;
     m_AnotherModel = nullptr;
-    for (auto& block : blocks)
-    {
-        block = nullptr;
-    }
 
     g_IBLTextures.clear();
 
@@ -258,11 +241,6 @@ void ModelViewer::Update(float deltaT)
 
     m_ModelInst.Update(gfxContext, deltaT);
     m_AnotherModel.Update(gfxContext, deltaT);
-    for (auto& block : blocks)
-    {
-        block.Resize(ModelUnitSize);
-        block.Update(gfxContext, deltaT);
-    }
 
     gfxContext.Finish();
 
@@ -341,14 +319,6 @@ void ModelViewer::RenderScene(void)
     sorter.SetDepthStencilTarget(g_SceneDepthBuffer);
     sorter.AddRenderTarget(g_SceneColorBuffer);
 
-    for (int i = 0; i < world.size(); i++)
-    {
-        //选取block
-        ModelInstance& mModel = blocks[i];
-        mModel.Translate(Vector3(world[i].GetX() * 1000.0f, world[i].GetY(), world[i].GetZ()));
-        mModel.Render(sorter);
-    }
-
     sorter.Sort();
     {
         ScopedTimer _prof(L"Depth Pre-Pass", gfxContext);
@@ -367,12 +337,6 @@ void ModelViewer::RenderScene(void)
             MeshSorter shadowSorter(MeshSorter::kShadows);
             shadowSorter.SetCamera(m_Camera);
             shadowSorter.SetDepthStencilTarget(g_ShadowBuffer);
-
-            for (int i = 0; i < world.size(); i++)
-            {
-                ModelInstance& mModel = blocks[i];
-                mModel.Render(shadowSorter);
-            }
 
             shadowSorter.Sort();
 
