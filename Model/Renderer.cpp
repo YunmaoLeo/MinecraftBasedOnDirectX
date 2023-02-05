@@ -317,7 +317,6 @@ void Renderer::Shutdown(void)
 uint8_t Renderer::GetPSO(uint16_t psoFlags)
 {
     using namespace PSOFlags;
-    std::cout << "psoFlags" << psoFlags<< std::endl;
     GraphicsPSO ColorPSO = m_DefaultPSO;
 
     uint16_t Requirements = kHasPosition | kHasNormal;
@@ -419,13 +418,11 @@ uint8_t Renderer::GetPSO(uint16_t psoFlags)
     {
         if (ColorPSO.GetPipelineStateObject() == sm_PSOs[i].GetPipelineStateObject())
         {
-            std::cout << "found PSO: " <<i<< std::endl; 
             return (uint8_t)i;
         }
     }
 
     // If not found, keep the new one, and return its index
-    std::cout << "not found pso" << std::endl;
     sm_PSOs.push_back(ColorPSO);
 
     // The returned PSO index has read-write depth.  The index+1 tests for equal depth.
@@ -537,7 +534,6 @@ void MeshSorter::AddMesh( const Mesh& mesh, float distance,
 
     SortObject object = { &mesh, skeleton, meshCBV, materialCBV, bufferPtr };
     m_SortObjects.push_back(object);
-	std::cout << "size of sort objects: " << m_SortObjects.size() << std::endl;
 }
 
 void MeshSorter::Sort()

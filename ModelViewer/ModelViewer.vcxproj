@@ -56,7 +56,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Blocks\Block.cpp" />
+    <ClCompile Include="Blocks\BlockResourceManager.cpp" />
     <ClCompile Include="ModelViewer.cpp" />
+    <ClCompile Include="World\World.cpp" />
+    <ClCompile Include="World\WorldBlock.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Core/Core.vcxproj">
@@ -119,6 +123,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Blocks\Block.h" />
+    <ClInclude Include="Blocks\BlockResourceManager.h" />
+    <ClInclude Include="World\World.h" />
+    <ClInclude Include="World\WorldBlock.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ItemDefinitionGroup>
