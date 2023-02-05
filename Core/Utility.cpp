@@ -13,6 +13,8 @@
 
 #include "pch.h"
 #include "Utility.h"
+
+#include <codecvt>
 #include <string>
 #include <locale>
 
@@ -242,4 +244,10 @@ std::string Utility::RemoveExtension(const std::string& filePath)
 std::wstring Utility::RemoveExtension(const std::wstring& filePath)
 {
     return filePath.substr(0, filePath.rfind(L"."));
+}
+
+std::wstring Utility::ConvertToWideString(const std::string& str)
+{
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+    return converter.from_bytes(str);
 }

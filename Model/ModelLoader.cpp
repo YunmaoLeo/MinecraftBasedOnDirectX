@@ -137,6 +137,7 @@ void LoadMaterials(Model& model,
 
 std::shared_ptr<Model> Renderer::LoadModel(const std::wstring& filePath, bool forceRebuild)
 {
+    forceRebuild = true;
     const std::wstring miniFileName = Utility::RemoveExtension(filePath) + L".mini";
     const std::wstring fileName = Utility::RemoveBasePath(filePath);
 
@@ -275,7 +276,18 @@ std::shared_ptr<Model> Renderer::LoadModel(const std::wstring& filePath, bool fo
 
     model->m_BoundingSphere = BoundingSphere(*(XMFLOAT4*)header.boundingSphere);
     model->m_BoundingBox = AxisAlignedBox(Vector3(*(XMFLOAT3*)header.minPos), Vector3(*(XMFLOAT3*)header.maxPos));
+    std::wcout << fileName << std::endl;
+    std::wcout << L"minPosition x: " <<
+        model->m_BoundingBox.GetMin().GetX() << "y: " <<
+            model->m_BoundingBox.GetMin().GetY()
+    <<"z: " << model->m_BoundingBox.GetMin().GetZ()
+    << std::endl;
 
+    std::wcout << L"maxPosition x: " <<
+    model->m_BoundingBox.GetMax().GetX() << "y: " <<
+        model->m_BoundingBox.GetMax().GetY()
+<<"z: " << model->m_BoundingBox.GetMax().GetZ()
+<< std::endl;
     // Load animation data
     model->m_NumAnimations = header.numAnimations;
 

@@ -85,6 +85,7 @@ namespace Utility
     std::wstring GetFileExtension(const std::wstring& str);
     std::string RemoveExtension(const std::string& str);
     std::wstring RemoveExtension(const std::wstring& str);
+    std::wstring ConvertToWideString(const std::string& str);
 
 
 } // namespace Utility

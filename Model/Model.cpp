@@ -70,7 +70,6 @@ void ModelInstance::Render(MeshSorter& sorter) const
 {
     if (m_Model != nullptr)
     {
-        std::cout << "model is not null" << std::endl;
         //const Frustum& frustum = sorter.GetWorldFrustum();
         m_Model->Render(sorter, m_MeshConstantsGPU, (const ScaleAndTranslation*)m_BoundingSphereTransforms.get(),
             m_Skeleton.get());
