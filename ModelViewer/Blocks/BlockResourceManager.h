@@ -21,12 +21,13 @@ namespace BlockResourceManager
         Diamond,
         Stone,
         Wood,
+        Grass,
         Dirt,
         RedStoneLamp,
         Torch,
 
 
-        Grass,
+
         BlocksCount,
     };
 

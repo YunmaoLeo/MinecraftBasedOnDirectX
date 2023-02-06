@@ -287,6 +287,7 @@ void ModelViewer::Update(float deltaT)
 
 void ModelViewer::RenderScene(void)
 {
+    std::cout << "start a render" << std::endl;
     GraphicsContext& gfxContext = GraphicsContext::Begin(L"Scene Render");
 
     uint32_t FrameIndex = TemporalEffects::GetFrameIndexMod2();
@@ -326,10 +327,14 @@ void ModelViewer::RenderScene(void)
     sorter.AddRenderTarget(g_SceneColorBuffer);
 
     // m_ModelInst.Render(sorter);
-    block.Render(sorter);
+    {
+        ScopedTimer _BlocksRenderProf(L"BlocksRenderToSorter", gfxContext);
+        block.Render(sorter);
+    }
     // block.blocks[0][0][1].Render(sorter);
     
     sorter.Sort();
+    
     {
         ScopedTimer _prof(L"Depth Pre-Pass", gfxContext);
         sorter.RenderMeshes(MeshSorter::kZPass, gfxContext, globals);

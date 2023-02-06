@@ -32,7 +32,7 @@ public:
 
     Math::Vector3 originPoint;
     uint16_t worldBlockSize = 256;
-    uint16_t worldBlockDepth = 2;
+    uint16_t worldBlockDepth = 5;
     std::vector<std::vector<std::vector<Block>>> blocks{};
 
 private:

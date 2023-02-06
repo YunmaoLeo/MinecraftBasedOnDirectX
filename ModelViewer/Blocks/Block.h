@@ -17,6 +17,7 @@ public:
 
 
     float radius;
+    bool isDirt = true;
     Math::Vector3 position;
     BlockResourceManager::BlockType blockType;
     ModelInstance model;

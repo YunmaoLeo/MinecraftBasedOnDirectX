@@ -17,7 +17,7 @@ void WorldBlock::InitBlocks()
                 {
                     continue;
                 }
-                int type = RandomNumberGenerator().NextInt(0,2);
+                int type = RandomNumberGenerator().NextInt(0,1);
                 Vector3 pointPos = originPoint + Vector3(x + 0.5f, y + 0.5f, z + 0.5f) * UnitBlockSize;
                 pointPos = Vector3(pointPos.GetX(), pointPos.GetZ(), pointPos.GetY());
                 blocks[x][y][z] = Block(pointPos, BlockResourceManager::BlockType(type), UnitBlockRadius);
