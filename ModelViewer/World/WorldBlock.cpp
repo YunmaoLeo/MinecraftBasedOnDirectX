@@ -68,7 +68,7 @@ void WorldBlock::SearchBlocksAdjacent2OuterAir()
     {
         for (int z = 0; z < worldBlockDepth; z++)
         {
-            blocks[x][0][z].adjacent2OuterAir = true;
+             blocks[x][0][z].adjacent2OuterAir = true;
             blocks[x][worldBlockSize - 1][z].adjacent2OuterAir = true;
         }
     }
@@ -78,7 +78,7 @@ void WorldBlock::SearchBlocksAdjacent2OuterAir()
         for (int y = 0; y < worldBlockSize; y++)
         {
             blocks[x][y][0].adjacent2OuterAir = true;
-            blocks[x][y][worldBlockDepth - 1].adjacent2OuterAir = true;
+             blocks[x][y][worldBlockDepth - 1].adjacent2OuterAir = true;
         }
     }
     for (int x = 0; x < worldBlockSize; x++)
@@ -96,7 +96,7 @@ void WorldBlock::SearchBlocksAdjacent2OuterAir()
     }
 }
 
-void WorldBlock::Render(Renderer::MeshSorter& sorter)
+void WorldBlock::Render(Renderer::MeshSorter& sorter, const Camera& camera)
 {
     int count = 0;
     for (int x = 0; x < worldBlockSize; x++)
@@ -105,10 +105,14 @@ void WorldBlock::Render(Renderer::MeshSorter& sorter)
         {
             for (int z = 0; z < worldBlockDepth; z++)
             {
-                if (blocks[x][y][z].adjacent2OuterAir)
+                Block& block = blocks[x][y][z];
+                
+                if (!block.IsNull()
+                    && block.adjacent2OuterAir
+                    && camera.GetWorldSpaceFrustum().IntersectSphere(block.model.GetBoundingSphere()))
                 {
                     count ++;
-                    blocks[x][y][z].Render(sorter);
+                    block.Render(sorter);
                 }
             }
         }

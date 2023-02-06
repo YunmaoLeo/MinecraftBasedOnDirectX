@@ -71,7 +71,7 @@ private:
     D3D12_RECT subScissor;
 
     ModelInstance m_ModelInst;
-    WorldBlock block;
+    WorldBlock world_block;
     ShadowCamera m_SunShadow;
 };
 
@@ -197,8 +197,8 @@ void ModelViewer::Startup(void)
     else
     {
         // Load Model
-        block = WorldBlock(Vector3(0,0,0), 30);
-        std::cout << "blockSize" << block.blocks.size() << std::endl;
+        world_block = WorldBlock(Vector3(0,0,0), 30);
+        std::cout << "blockSize" << world_block.blocks.size() << std::endl;
         m_ModelInst = BlockResourceManager::getBlock(BlockResourceManager::Diamond).m_Model;
         m_ModelInst.Resize(1000.0f);
         m_ModelInst.Translate({-500,-500,-500});
@@ -219,7 +219,7 @@ void ModelViewer::Startup(void)
 void ModelViewer::Cleanup(void)
 {
     m_ModelInst = nullptr;
-    block.CleanUp();
+    world_block.CleanUp();
 
     g_IBLTextures.clear();
 
@@ -246,7 +246,7 @@ void ModelViewer::Update(float deltaT)
     GraphicsContext& gfxContext = GraphicsContext::Begin(L"Scene Update");
 
     // m_ModelInst.Update(gfxContext, deltaT);
-    block.Update(gfxContext, deltaT);
+    world_block.Update(gfxContext, deltaT);
 
     gfxContext.Finish();
                                                         
@@ -329,9 +329,8 @@ void ModelViewer::RenderScene(void)
     // m_ModelInst.Render(sorter);
     {
         ScopedTimer _BlocksRenderProf(L"BlocksRenderToSorter", gfxContext);
-        block.Render(sorter);
+        world_block.Render(sorter, m_Camera);
     }
-    // block.blocks[0][0][1].Render(sorter);
     
     sorter.Sort();
     
@@ -354,7 +353,7 @@ void ModelViewer::RenderScene(void)
             shadowSorter.SetDepthStencilTarget(g_ShadowBuffer);
 
             // m_ModelInst.Render(shadowSorter);
-            block.Render(shadowSorter);
+            world_block.Render(shadowSorter, m_Camera);
             
             shadowSorter.Sort();
 

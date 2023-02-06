@@ -28,7 +28,7 @@ public:
     void Update(GraphicsContext& gfxContext, float deltaTime);
     void SpreadAdjacent2OuterAir(int x, int y, int z, std::vector<std::vector<std::vector<int>>>& blockStatus);
     void SearchBlocksAdjacent2OuterAir();
-    void Render(Renderer::MeshSorter& sorter);
+    void Render(Renderer::MeshSorter& sorter, const Math::Camera& m_Camera);
     void CleanUp();
 
 
