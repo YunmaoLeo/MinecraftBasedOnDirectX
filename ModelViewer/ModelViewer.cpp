@@ -197,7 +197,7 @@ void ModelViewer::Startup(void)
     else
     {
         // Load Model
-        block = WorldBlock(Vector3(0,0,0), 15);
+        block = WorldBlock(Vector3(0,0,0), 30);
         std::cout << "blockSize" << block.blocks.size() << std::endl;
         m_ModelInst = BlockResourceManager::getBlock(BlockResourceManager::Diamond).m_Model;
         m_ModelInst.Resize(1000.0f);
