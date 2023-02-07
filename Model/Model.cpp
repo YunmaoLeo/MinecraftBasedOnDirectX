@@ -289,3 +289,30 @@ Math::OrientedBox ModelInstance::GetBoundingBox() const
 
     return m_Locator * m_Model->m_BoundingBox;
 }
+
+Math::AxisAlignedBox ModelInstance::GetAxisAlignedBox() const
+{
+    if (m_Model == nullptr)
+        return AxisAlignedBox(Vector3(kZero), Vector3(kZero));
+    Vector3 min = m_Locator * m_Model->m_BoundingBox.GetMin();
+    Vector3 max = m_Locator * m_Model->m_BoundingBox.GetMax();
+    return {min, max};
+}
+
+Vector3 ModelInstance::GetAxisAlignBoxMin() const
+{
+    if (m_Model == nullptr)
+    {
+        return Vector3(kZero);
+    }
+    return m_Locator * m_Model->m_BoundingBox.GetMin();
+}
+
+Vector3 ModelInstance::GetAxisAlignBoxMax() const
+{
+    if (m_Model == nullptr)
+    {
+        return Vector3(kZero);
+    }
+    return m_Locator * m_Model->m_BoundingBox.GetMax();
+}

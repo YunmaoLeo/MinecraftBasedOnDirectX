@@ -200,8 +200,8 @@ void ModelViewer::Startup(void)
         world_block = WorldBlock(Vector3(0,0,0), 30);
         std::cout << "blockSize" << world_block.blocks.size() << std::endl;
         m_ModelInst = BlockResourceManager::getBlock(BlockResourceManager::Diamond).m_Model;
-        m_ModelInst.Resize(1000.0f);
-        m_ModelInst.Translate({-500,-500,-500});
+        // m_ModelInst.Resize(1000.0f);
+        // m_ModelInst.Translate({-500,-500,-500});
         MotionBlur::Enable = false;
         //Lighting::CreateRandomLights(m_ModelInst.m_Model->m_BoundingBox.GetMin(),m_ModelInst.m_Model->m_BoundingBox.GetMax());
     }

@@ -28,14 +28,22 @@ public:
     void Update(GraphicsContext& gfxContext, float deltaTime);
     void SpreadAdjacent2OuterAir(int x, int y, int z, std::vector<std::vector<std::vector<int>>>& blockStatus);
     void SearchBlocksAdjacent2OuterAir();
+    void RenderBlocksInRange(int minX, int maxX, int minY, int maxY, int minZ, int maxZ, Renderer::MeshSorter& sorter,
+                            const Math::Camera& camera);
+    void RenderBlocksInRangeNoIntersectCheck(int minX, int maxX, int minY, int maxY, int minZ, int maxZ,
+                                             Renderer::MeshSorter& sorter, const Math::Camera& camera);
+    void OctreeRenderBlocks(int minX, int maxX, int minY, int maxY, int minZ, int maxZ, int depth,
+                            Renderer::MeshSorter& sorter, const Math::Camera& camera);
     void Render(Renderer::MeshSorter& sorter, const Math::Camera& m_Camera);
     void CleanUp();
 
 
     Math::Vector3 originPoint;
     uint16_t worldBlockSize = 256;
-    uint16_t worldBlockDepth = 5;
+    uint16_t worldBlockDepth = 15;
     std::vector<std::vector<std::vector<Block>>> blocks{};
 
 private:
+
+    int count = 0;
 };
