@@ -16,8 +16,7 @@ Program is now allow to generate a simple random world of blocks with scene like
 Now, we focus on how to minimize the render cost.
 
 First, illustrate the time cost of each step with two different camera perspective.
-
-![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/b7b5e58d-a2bf-4983-a8cd-3bbd8796e09b/Untitled.png)
+![Untitled (2)](https://user-images.githubusercontent.com/79432990/217585396-d6cbbfee-602b-47db-b570-9af4a128b71f.png)
 
 1. Looking at the whole blocks.
 
@@ -30,10 +29,7 @@ Depth Pre-Pass: 182192 ticks
 Sun Shadow Map: 235159 ticks
 
 Render Color: 198821 ticks.
-
-![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/30263561-90a9-4677-8ef3-c73f71580f2c/Untitled.png)
-
-1. Looking at a corner of blocks.
+![Untitled (3)](https://user-images.githubusercontent.com/79432990/217585892-4b3c94a1-7e4d-438e-bc7e-29475a07cee1.png)
 
 CPU cost/frame: 7.4ms
 
@@ -77,9 +73,7 @@ To optimize render step, the main approach is to minimize the blocks that need C
     We trying to adopt following optimize strategies.
     
     1. **Those blocks that been occluded are unable to seen, which we don’t need to  render them.**
-        
-        ![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/ac4ca78c-0279-4cc5-a886-eda32ccee741/Untitled.png)
-        
+        ![Untitled (4)](https://user-images.githubusercontent.com/79432990/217585858-06f9da67-2bf6-40f0-9313-6e6e98b70f1c.png)
         Considering above blocks, blue means there is a blick, white means there is air. Only blocks  adjacent to **outter air** can be able to seen. (However, we leave transparent blocks aside for now.)
         
         ### Implementation of Adjacent to Air Block Detection
@@ -199,9 +193,7 @@ To optimize render step, the main approach is to minimize the blocks that need C
             - nothing in view frustum: 20000ticks
             - full scene in view frustum: 85000 ticks (O(n))
             - half scene in view frustum: 63096 ticks (1687blocks) (22.73ticks/blocsk)
-                
-                ![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/d1036b76-9c76-4694-b60b-3d3d221d9120/Untitled.png)
-                
+                ![Untitled (5)](https://user-images.githubusercontent.com/79432990/217586177-0c97a18a-5491-4ee3-b823-9f983d41b09e.png)
         - After Using Octree
             
             Detect and render meshes into the sorter:
@@ -242,11 +234,9 @@ To optimize render step, the main approach is to minimize the blocks that need C
     Performance:
     
     The scene:
-    
-    ![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/dede0f2a-0319-46d8-a9b8-fac16a189de3/Untitled.png)
-    
-    ![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/a61752b9-3c73-4c66-8a13-1ae79b16bd82/Untitled.png)
-    
+    ![Untitled (6)](https://user-images.githubusercontent.com/79432990/217586324-ec06c4d2-219f-44a6-9eb4-d0a16c408ade.png)
+    ![Untitled (7)](https://user-images.githubusercontent.com/79432990/217586363-0fe00acd-fab6-45a4-a477-8ffbfba2c90f.png)
+
     Occludee: chess board, with a large amount of meshes.
     
     We move our camera to back of a diamond block.
@@ -254,9 +244,8 @@ To optimize render step, the main approach is to minimize the blocks that need C
     - Before we turn on the Occlusion Culling
         - GPU will execute drawInstance, but will cull meshes while doing z-buffer.
         - GPU costs about 2.03ms for a frame
-        
-        ![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/d67d45e8-fab9-43a1-8e54-5ca10634f535/Untitled.png)
-        
+        ![Untitled (8)](https://user-images.githubusercontent.com/79432990/217586526-7f07e071-d527-4d89-aa8a-f67b21da4781.png)
     - After:
         - GPU will not execute any command relative to drawInstance process
-        - GPU costs about 1.43ms for a frame.
+        - GPU costs about 1.43ms for a frame.!
+       ![Untitled (9)](https://user-images.githubusercontent.com/79432990/217587057-298383eb-6daf-48be-b1e8-b07592c90e31.png)
