@@ -1,5 +1,6 @@
 ﻿#include "WorldBlock.h"
 
+#include "ShadowCamera.h"
 #include "World.h"
 #include "Math/Random.h"
 using namespace Math;
@@ -20,13 +21,21 @@ void WorldBlock::InitBlocks()
         {
             for (int z = 0; z < worldBlockDepth; z++)
             {
-                if (generator.NextFloat() < 0.3)
-                {
-                    continue;
-                }
+                // if (generator.NextFloat() < 0.3)
+                // {
+                //     continue;
+                // }
                 int type = generator.NextInt(0, 1);
                 Vector3 pointPos = originPoint + Vector3(x + 0.5f, y + 0.5f, z + 0.5f) * UnitBlockSize;
                 pointPos = Vector3(pointPos.GetX(), pointPos.GetZ(), pointPos.GetY());
+                if (x==0 && y==0 && z==0)
+                {
+                    type = BlockResourceManager::BlockType::TBall;
+                }
+                else
+                {
+                    type = BlockResourceManager::BlockType::Diamond;
+                }
                 blocks[x][y][z] = Block(pointPos, BlockResourceManager::BlockType(type), UnitBlockRadius);
                 blocks[x][y][z].model.Resize(World::UnitBlockRadius);
                 blocks[x][y][z].model.Translate(pointPos);

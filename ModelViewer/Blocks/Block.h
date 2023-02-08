@@ -33,7 +33,7 @@ public:
         return transparent;
     }
 
-private:
+
     float radius;
     bool isDirt = true;
     bool transparent = false;
@@ -41,4 +41,6 @@ private:
     Math::Vector3 position;
     BlockResourceManager::BlockType blockType;
     ModelInstance model;
+
+private:
 };

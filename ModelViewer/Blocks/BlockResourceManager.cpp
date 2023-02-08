@@ -9,6 +9,7 @@ namespace BlockResourceManager
 {
     bool m_BlocksInitialized = true;
     std::unordered_map<BlockType, std::string> BlockNameMap = {
+        {TBall, "tball"},
         {Diamond, "diamond"},
         {Dirt, "dirt"},
         {Grass, "grass"},
@@ -30,7 +31,7 @@ void BlockResourceManager::initBlocks()
         std::string BlockName = BlockNameMap[type];
         std::string BlockPath = BLOCKS_RESOURCE_PATH + BlockName + "/" + "scene.gltf";
 
-        const ModelInstance model{Renderer::LoadModel(Utility::ConvertToWideString(BlockPath), false)};
+        const ModelInstance model{Renderer::LoadModel(Utility::ConvertToWideString(BlockPath), true)};
 
         m_BlockMap[type] = model.m_Model;
     }

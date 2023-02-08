@@ -96,6 +96,7 @@ namespace Renderer
 			ASSERT(m_NumRTVs < 8);
 			m_RTV[m_NumRTVs++] = &RTV;
 		}
+    	void DisableColorAndDepthWrites();
 		void SetDepthStencilTarget( DepthBuffer& DSV ) { m_DSV = &DSV; }
 
         const Frustum& GetWorldFrustum() const { return m_Camera->GetWorldSpaceFrustum(); }
@@ -109,8 +110,9 @@ namespace Renderer
             const Joint* skeleton = nullptr);
 
         void Sort();
+		void RenderMeshesForOcclusion(DrawPass pass, GraphicsContext& context, GlobalConstants& globals);
 
-        void RenderMeshes(DrawPass pass, GraphicsContext& context, GlobalConstants& globals);
+		void RenderMeshes(DrawPass pass, GraphicsContext& context, GlobalConstants& globals);
 		void RenderMeshes(DrawPass pass, GraphicsContext& context, GlobalConstants& globals, const Matrix4& viewprojmat);
 
 	private:

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 
+#include "ShadowCamera.h"
 #include "../Blocks/Block.h"
 #include "Math/Vector.h"
 
@@ -35,12 +36,13 @@ public:
     void OctreeRenderBlocks(int minX, int maxX, int minY, int maxY, int minZ, int maxZ, int depth,
                             Renderer::MeshSorter& sorter, const Math::Camera& camera);
     void Render(Renderer::MeshSorter& sorter, const Math::Camera& m_Camera);
+    void Render(Renderer::MeshSorter& sorter, const Math::Camera& camera, const ShadowCamera& shadowCamera);
     void CleanUp();
 
 
     Math::Vector3 originPoint;
     uint16_t worldBlockSize = 256;
-    uint16_t worldBlockDepth = 15;
+    uint16_t worldBlockDepth = 2;
     std::vector<std::vector<std::vector<Block>>> blocks{};
 
 private:
