@@ -14,6 +14,8 @@
 #include "pch.h"
 #include "SystemTime.h"
 
+#include <iostream>
+
 double SystemTime::sm_CpuTickDelta = 0.0;
 
 // Query the performance counter frequency

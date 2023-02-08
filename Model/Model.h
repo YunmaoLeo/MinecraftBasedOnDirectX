@@ -113,6 +113,7 @@ public:
 
     Math::BoundingSphere m_BoundingSphere; // Object-space bounding sphere
     Math::AxisAlignedBox m_BoundingBox;
+    Math::AxisAlignedBox m_BoundBoxWithLocator;
     ByteAddressBuffer m_DataBuffer;
     ByteAddressBuffer m_MaterialConstants;
     uint32_t m_NumNodes;
@@ -156,6 +157,9 @@ public:
     Math::Scalar GetRadius() const;
     Math::BoundingSphere GetBoundingSphere() const;
     Math::OrientedBox GetBoundingBox() const;
+    Math::AxisAlignedBox GetAxisAlignedBox() const;
+    Math::Vector3 GetAxisAlignBoxMin() const;
+    Math::Vector3 GetAxisAlignBoxMax() const;
 
     size_t GetNumAnimations(void) const { return m_AnimState.size(); }
     void PlayAnimation(uint32_t animIdx, bool loop);
@@ -166,7 +170,7 @@ public:
     void LoopAllAnimations(void);
     std::shared_ptr<const Model> m_Model;
 private:
-
+    
     UploadBuffer m_MeshConstantsCPU;
     ByteAddressBuffer m_MeshConstantsGPU;
     std::unique_ptr<__m128[]> m_BoundingSphereTransforms;

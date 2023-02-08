@@ -48,6 +48,8 @@
 
 #pragma warning(disable:4319) // '~': zero extending 'uint32_t' to 'uint64_t' of greater size
 
+BoolVar SetTopologyTypeToLine("Model/setTypologyLine", false);
+
 using namespace Math;
 using namespace Graphics;
 using namespace Renderer;
@@ -72,6 +74,7 @@ namespace Renderer
     RootSignature m_RootSig;
     GraphicsPSO m_SkyboxPSO(L"Renderer: Skybox PSO");
     GraphicsPSO m_DefaultPSO(L"Renderer: Default PSO"); // Not finalized.  Used as a template.
+    GraphicsPSO m_OcclusionPSO(L"Renderer: OcclusionPSO");
 
     DescriptorHandle m_CommonTextures;
 }
@@ -93,9 +96,12 @@ void Renderer::Initialize(void)
     m_RootSig.InitStaticSampler(12, CubeMapSamplerDesc, D3D12_SHADER_VISIBILITY_PIXEL);
     m_RootSig[kMeshConstants].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_VERTEX);
     m_RootSig[kMaterialConstants].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_PIXEL);
-    m_RootSig[kMaterialSRVs].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 10, D3D12_SHADER_VISIBILITY_PIXEL);
-    m_RootSig[kMaterialSamplers].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, 0, 10, D3D12_SHADER_VISIBILITY_PIXEL);
-    m_RootSig[kCommonSRVs].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 10, 10, D3D12_SHADER_VISIBILITY_PIXEL);
+    m_RootSig[kMaterialSRVs].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 10,
+                                                   D3D12_SHADER_VISIBILITY_PIXEL);
+    m_RootSig[kMaterialSamplers].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, 0, 10,
+                                                       D3D12_SHADER_VISIBILITY_PIXEL);
+    m_RootSig[kCommonSRVs].
+        InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 10, 10, D3D12_SHADER_VISIBILITY_PIXEL);
     m_RootSig[kCommonCBV].InitAsConstantBuffer(1);
     m_RootSig[kSkinMatrices].InitAsBufferSRV(20, D3D12_SHADER_VISIBILITY_VERTEX);
     m_RootSig.Finalize(L"RootSig", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
@@ -105,28 +111,58 @@ void Renderer::Initialize(void)
 
     D3D12_INPUT_ELEMENT_DESC posOnly[] =
     {
-        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        {
+            "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+            D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0
+        },
     };
 
     D3D12_INPUT_ELEMENT_DESC posAndUV[] =
     {
-        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "TEXCOORD", 0, DXGI_FORMAT_R16G16_FLOAT,       0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        {
+            "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+            D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0
+        },
+        {
+            "TEXCOORD", 0, DXGI_FORMAT_R16G16_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+            D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0
+        },
     };
 
     D3D12_INPUT_ELEMENT_DESC skinPos[] =
     {
-        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "BLENDINDICES", 0, DXGI_FORMAT_R16G16B16A16_UINT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "BLENDWEIGHT", 0, DXGI_FORMAT_R16G16B16A16_UNORM, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        {
+            "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+            D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0
+        },
+        {
+            "BLENDINDICES", 0, DXGI_FORMAT_R16G16B16A16_UINT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+            D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0
+        },
+        {
+            "BLENDWEIGHT", 0, DXGI_FORMAT_R16G16B16A16_UNORM, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+            D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0
+        },
     };
 
     D3D12_INPUT_ELEMENT_DESC skinPosAndUV[] =
     {
-        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "TEXCOORD", 0, DXGI_FORMAT_R16G16_FLOAT,       0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "BLENDINDICES", 0, DXGI_FORMAT_R16G16B16A16_UINT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "BLENDWEIGHT", 0, DXGI_FORMAT_R16G16B16A16_UNORM, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        {
+            "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+            D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0
+        },
+        {
+            "TEXCOORD", 0, DXGI_FORMAT_R16G16_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+            D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0
+        },
+        {
+            "BLENDINDICES", 0, DXGI_FORMAT_R16G16B16A16_UINT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+            D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0
+        },
+        {
+            "BLENDWEIGHT", 0, DXGI_FORMAT_R16G16B16A16_UNORM, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+            D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0
+        },
     };
 
     ASSERT(sm_PSOs.size() == 0);
@@ -203,7 +239,7 @@ void Renderer::Initialize(void)
     m_DefaultPSO.SetRenderTargetFormats(1, &ColorFormat, DepthFormat);
     m_DefaultPSO.SetVertexShader(g_pDefaultVS, sizeof(g_pDefaultVS));
     m_DefaultPSO.SetPixelShader(g_pDefaultPS, sizeof(g_pDefaultPS));
-
+    
     // Skybox PSO
 
     m_SkyboxPSO = m_DefaultPSO;
@@ -226,7 +262,7 @@ void Renderer::Initialize(void)
     m_CommonTextures = s_TextureHeap.Alloc(8);
 
     uint32_t DestCount = 8;
-    uint32_t SourceCounts[] = { 1, 1, 1, 1, 1, 1, 1, 1 };
+    uint32_t SourceCounts[] = {1, 1, 1, 1, 1, 1, 1, 1};
 
     D3D12_CPU_DESCRIPTOR_HANDLE SourceTextures[] =
     {
@@ -240,7 +276,8 @@ void Renderer::Initialize(void)
         Lighting::m_LightGridBitMask.GetSRV(),
     };
 
-    g_Device->CopyDescriptors(1, &m_CommonTextures, &DestCount, DestCount, SourceTextures, SourceCounts, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    g_Device->CopyDescriptors(1, &m_CommonTextures, &DestCount, DestCount, SourceTextures, SourceCounts,
+                              D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
     g_SSAOFullScreenID = g_SSAOFullScreen.GetVersionID();
     g_ShadowBufferID = g_ShadowBuffer.GetVersionID();
@@ -257,7 +294,7 @@ void Renderer::UpdateGlobalDescriptors(void)
     }
 
     uint32_t DestCount = 2;
-    uint32_t SourceCounts[] = { 1, 1 };
+    uint32_t SourceCounts[] = {1, 1};
 
     D3D12_CPU_DESCRIPTOR_HANDLE SourceTextures[] =
     {
@@ -267,11 +304,11 @@ void Renderer::UpdateGlobalDescriptors(void)
 
     DescriptorHandle dest = m_CommonTextures + 2 * s_TextureHeap.GetDescriptorSize();
 
-    g_Device->CopyDescriptors(1, &dest, &DestCount, DestCount, SourceTextures, SourceCounts, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    g_Device->CopyDescriptors(1, &dest, &DestCount, DestCount, SourceTextures, SourceCounts,
+                              D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
     g_SSAOFullScreenID = g_SSAOFullScreen.GetVersionID();
     g_ShadowBufferID = g_ShadowBuffer.GetVersionID();
-
 }
 
 void Renderer::SetIBLTextures(TextureRef diffuseIBL, TextureRef specularIBL)
@@ -289,7 +326,7 @@ void Renderer::SetIBLTextures(TextureRef diffuseIBL, TextureRef specularIBL)
     }
 
     uint32_t DestCount = 2;
-    uint32_t SourceCounts[] = { 1, 1 };
+    uint32_t SourceCounts[] = {1, 1};
 
     D3D12_CPU_DESCRIPTOR_HANDLE SourceTextures[] =
     {
@@ -297,7 +334,8 @@ void Renderer::SetIBLTextures(TextureRef diffuseIBL, TextureRef specularIBL)
         diffuseIBL.IsValid() ? diffuseIBL.GetSRV() : GetDefaultTexture(kBlackCubeMap)
     };
 
-    g_Device->CopyDescriptors(1, &m_CommonTextures, &DestCount, DestCount, SourceTextures, SourceCounts, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    g_Device->CopyDescriptors(1, &m_CommonTextures, &DestCount, DestCount, SourceTextures, SourceCounts,
+                              D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 }
 
 void Renderer::SetIBLBias(float LODBias)
@@ -324,21 +362,27 @@ uint8_t Renderer::GetPSO(uint16_t psoFlags)
 
     std::vector<D3D12_INPUT_ELEMENT_DESC> vertexLayout;
     if (psoFlags & kHasPosition)
-        vertexLayout.push_back({"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT});
+        vertexLayout.push_back({"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT});
     if (psoFlags & kHasNormal)
-        vertexLayout.push_back({"NORMAL",   0, DXGI_FORMAT_R10G10B10A2_UNORM,  0, D3D12_APPEND_ALIGNED_ELEMENT});
+        vertexLayout.push_back({"NORMAL", 0, DXGI_FORMAT_R10G10B10A2_UNORM, 0, D3D12_APPEND_ALIGNED_ELEMENT});
     if (psoFlags & kHasTangent)
-        vertexLayout.push_back({"TANGENT",  0, DXGI_FORMAT_R10G10B10A2_UNORM,  0, D3D12_APPEND_ALIGNED_ELEMENT});
+        vertexLayout.push_back({"TANGENT", 0, DXGI_FORMAT_R10G10B10A2_UNORM, 0, D3D12_APPEND_ALIGNED_ELEMENT});
     if (psoFlags & kHasUV0)
-        vertexLayout.push_back({"TEXCOORD", 0, DXGI_FORMAT_R16G16_FLOAT,       0, D3D12_APPEND_ALIGNED_ELEMENT});
+        vertexLayout.push_back({"TEXCOORD", 0, DXGI_FORMAT_R16G16_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT});
     else
-        vertexLayout.push_back({"TEXCOORD", 0, DXGI_FORMAT_R16G16_FLOAT,       1, D3D12_APPEND_ALIGNED_ELEMENT});
+        vertexLayout.push_back({"TEXCOORD", 0, DXGI_FORMAT_R16G16_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT});
     if (psoFlags & kHasUV1)
-        vertexLayout.push_back({"TEXCOORD", 1, DXGI_FORMAT_R16G16_FLOAT,       0, D3D12_APPEND_ALIGNED_ELEMENT});
+        vertexLayout.push_back({"TEXCOORD", 1, DXGI_FORMAT_R16G16_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT});
     if (psoFlags & kHasSkin)
     {
-        vertexLayout.push_back({ "BLENDINDICES", 0, DXGI_FORMAT_R16G16B16A16_UINT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
-        vertexLayout.push_back({ "BLENDWEIGHT", 0, DXGI_FORMAT_R16G16B16A16_UNORM, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
+        vertexLayout.push_back({
+            "BLENDINDICES", 0, DXGI_FORMAT_R16G16B16A16_UINT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+            D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0
+        });
+        vertexLayout.push_back({
+            "BLENDWEIGHT", 0, DXGI_FORMAT_R16G16B16A16_UNORM, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+            D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0
+        });
     }
 
     ColorPSO.SetInputLayout((uint32_t)vertexLayout.size(), vertexLayout.data());
@@ -440,7 +484,8 @@ uint8_t Renderer::GetPSO(uint16_t psoFlags)
     return (uint8_t)sm_PSOs.size() - 2;
 }
 
-void Renderer::DrawSkybox( GraphicsContext& gfxContext, const Camera& Camera, const D3D12_VIEWPORT& viewport, const D3D12_RECT& scissor )
+void Renderer::DrawSkybox(GraphicsContext& gfxContext, const Camera& Camera, const D3D12_VIEWPORT& viewport,
+                          const D3D12_RECT& scissor)
 {
     ScopedTimer _prof(L"Draw Skybox", gfxContext);
 
@@ -473,34 +518,38 @@ void Renderer::DrawSkybox( GraphicsContext& gfxContext, const Camera& Camera, co
     gfxContext.Draw(3);
 }
 
-void MeshSorter::AddMesh( const Mesh& mesh, float distance,
-    D3D12_GPU_VIRTUAL_ADDRESS meshCBV,
-    D3D12_GPU_VIRTUAL_ADDRESS materialCBV,
-    D3D12_GPU_VIRTUAL_ADDRESS bufferPtr,
-    const Joint* skeleton)
+void MeshSorter::AddMesh(const Mesh& mesh, float distance,
+                         D3D12_GPU_VIRTUAL_ADDRESS meshCBV,
+                         D3D12_GPU_VIRTUAL_ADDRESS materialCBV,
+                         D3D12_GPU_VIRTUAL_ADDRESS bufferPtr,
+                         const Joint* skeleton)
 {
     SortKey key;
     key.value = m_SortObjects.size();
 
-	bool alphaBlend = (mesh.psoFlags & PSOFlags::kAlphaBlend) == PSOFlags::kAlphaBlend;
+    bool alphaBlend = (mesh.psoFlags & PSOFlags::kAlphaBlend) == PSOFlags::kAlphaBlend;
     bool alphaTest = (mesh.psoFlags & PSOFlags::kAlphaTest) == PSOFlags::kAlphaTest;
     bool skinned = (mesh.psoFlags & PSOFlags::kHasSkin) == PSOFlags::kHasSkin;
     uint64_t depthPSO = (skinned ? 2 : 0) + (alphaTest ? 1 : 0);
 
-    union float_or_int { float f; uint32_t u; } dist;
+    union float_or_int
+    {
+        float f;
+        uint32_t u;
+    } dist;
     dist.f = Max(distance, 0.0f);
 
-	if (m_BatchType == kShadows)
-	{
-		if (alphaBlend)
-			return;
+    if (m_BatchType == kShadows)
+    {
+        if (alphaBlend)
+            return;
 
-		key.passID = kZPass;
-		key.psoIdx = depthPSO + 4;
+        key.passID = kZPass;
+        key.psoIdx = depthPSO + 4;
         key.key = dist.u;
-		m_SortKeys.push_back(key.value);
-		m_PassCounts[kZPass]++;
-	}
+        m_SortKeys.push_back(key.value);
+        m_PassCounts[kZPass]++;
+    }
     else if (mesh.psoFlags & PSOFlags::kAlphaBlend)
     {
         key.passID = kTransparent;
@@ -532,27 +581,32 @@ void MeshSorter::AddMesh( const Mesh& mesh, float distance,
         m_PassCounts[kOpaque]++;
     }
 
-    SortObject object = { &mesh, skeleton, meshCBV, materialCBV, bufferPtr };
+    SortObject object = {&mesh, skeleton, meshCBV, materialCBV, bufferPtr};
     m_SortObjects.push_back(object);
 }
 
 void MeshSorter::Sort()
 {
-    struct { bool operator()(uint64_t a, uint64_t b) const { return a < b; } } Cmp;
+    struct
+    {
+        bool operator()(uint64_t a, uint64_t b) const { return a < b; }
+    } Cmp;
     std::sort(m_SortKeys.begin(), m_SortKeys.end(), Cmp);
 }
 
-void MeshSorter::RenderMeshes(
+void MeshSorter::RenderMeshesForOcclusion(
     DrawPass pass,
     GraphicsContext& context,
-    GlobalConstants& globals)
+                                          GlobalConstants& globals)
 {
-	ASSERT(m_DSV != nullptr);
+        ASSERT(m_DSV != nullptr);
 
     Renderer::UpdateGlobalDescriptors();
-
+    
     context.SetRootSignature(m_RootSig);
-    context.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    context.SetPrimitiveTopology(SetTopologyTypeToLine
+                                     ? D3D_PRIMITIVE_TOPOLOGY_LINELIST
+                                     : D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     context.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, s_TextureHeap.GetHeapPointer());
     context.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, s_SamplerHeap.GetHeapPointer());
 
@@ -560,93 +614,188 @@ void MeshSorter::RenderMeshes(
     context.SetDescriptorTable(kCommonSRVs, m_CommonTextures);
 
     // Set common shader constants
-	globals.ViewProjMatrix = m_Camera->GetViewProjMatrix();
-	globals.CameraPos = m_Camera->GetPosition();
+    globals.ViewProjMatrix = m_Camera->GetViewProjMatrix();
+    globals.CameraPos = m_Camera->GetPosition();
     globals.IBLRange = s_SpecularIBLRange - s_SpecularIBLBias;
     globals.IBLBias = s_SpecularIBLBias;
-	context.SetDynamicConstantBufferView(kCommonCBV, sizeof(GlobalConstants), &globals);
+    context.SetDynamicConstantBufferView(kCommonCBV, sizeof(GlobalConstants), &globals);
 
-	if (m_BatchType == kShadows)
-	{
-		context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
-		context.ClearDepth(*m_DSV);
-		context.SetDepthStencilTarget(m_DSV->GetDSV());
+    if (m_Viewport.Width == 0)
+    {
+        m_Viewport.TopLeftX = 0.0f;
+        m_Viewport.TopLeftY = 0.0f;
+        m_Viewport.Width = (float)m_DSV->GetWidth();
+        m_Viewport.Height = (float)m_DSV->GetHeight();
+        m_Viewport.MaxDepth = 1.0f;
+        m_Viewport.MinDepth = 0.0f;
 
-		if (m_Viewport.Width == 0)
-		{
-			m_Viewport.TopLeftX = 0.0f;
-			m_Viewport.TopLeftY = 0.0f;
-			m_Viewport.Width = (float)m_DSV->GetWidth();
-			m_Viewport.Height = (float)m_DSV->GetHeight();
-			m_Viewport.MaxDepth = 1.0f;
-			m_Viewport.MinDepth = 0.0f;
+        m_Scissor.left = 0;
+        m_Scissor.right = m_DSV->GetWidth();
+        m_Scissor.top = 0;
+        m_Scissor.bottom = m_DSV->GetWidth();
+    }
 
-			m_Scissor.left = 1;
-			m_Scissor.right = m_DSV->GetWidth() - 2;
-			m_Scissor.top = 1;
-			m_Scissor.bottom = m_DSV->GetHeight() - 2;
-		}
-	}
-	else
-	{
-		for (uint32_t i = 0; i < m_NumRTVs; ++i)
-		{
-			ASSERT(m_RTV[i] != nullptr);
-			ASSERT(m_DSV->GetWidth() == m_RTV[i]->GetWidth());
-			ASSERT(m_DSV->GetHeight() == m_RTV[i]->GetHeight());
-		}
-
-		if (m_Viewport.Width == 0)
-		{
-			m_Viewport.TopLeftX = 0.0f;
-			m_Viewport.TopLeftY = 0.0f;
-			m_Viewport.Width = (float)m_DSV->GetWidth();
-			m_Viewport.Height = (float)m_DSV->GetHeight();
-			m_Viewport.MaxDepth = 1.0f;
-			m_Viewport.MinDepth = 0.0f;
-
-			m_Scissor.left = 0;
-			m_Scissor.right = m_DSV->GetWidth();
-			m_Scissor.top = 0;
-			m_Scissor.bottom = m_DSV->GetWidth();
-		}
-	}
-
-    for ( ; m_CurrentPass <= pass; m_CurrentPass = (DrawPass)(m_CurrentPass + 1))
+    for (; m_CurrentPass <= pass; m_CurrentPass = (DrawPass)(m_CurrentPass + 1))
     {
         const uint32_t passCount = m_PassCounts[m_CurrentPass];
         if (passCount == 0)
             continue;
 
-		if (m_BatchType == kDefault)
-		{
-			switch (m_CurrentPass)
-			{
-			case kZPass:
-				context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-				context.SetDepthStencilTarget(m_DSV->GetDSV());
-				break;
-			case kOpaque:
-				if (SeparateZPass)
-				{
-					context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_DEPTH_READ);
-					context.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
-					context.SetRenderTarget(g_SceneColorBuffer.GetRTV(), m_DSV->GetDSV_DepthReadOnly());
-				}
-				else
-				{
-					context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-					context.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
-					context.SetRenderTarget(g_SceneColorBuffer.GetRTV(), m_DSV->GetDSV());
-				}
-				break;
-			case kTransparent:
-				context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_DEPTH_READ);
-				context.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
-				context.SetRenderTarget(g_SceneColorBuffer.GetRTV(), m_DSV->GetDSV_DepthReadOnly());
-				break;
-			}
-		}
+        context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_DEPTH_READ);
+        context.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        context.SetRenderTarget(g_SceneColorBuffer.GetRTV(), m_DSV->GetDSV_DepthReadOnly());
+
+        context.SetViewportAndScissor(m_Viewport, m_Scissor);
+        context.FlushResourceBarriers();
+
+        const uint32_t lastDraw = m_CurrentDraw + passCount;
+
+        while (m_CurrentDraw < lastDraw)
+        {
+            SortKey key;
+            key.value = m_SortKeys[m_CurrentDraw];
+            const SortObject& object = m_SortObjects[key.objectIdx];
+            const Mesh& mesh = *object.mesh;
+
+            context.SetConstantBuffer(kMeshConstants, object.meshCBV);
+            // context.SetConstantBuffer(kMaterialConstants, object.materialCBV);
+            // context.SetDescriptorTable(kMaterialSRVs, s_TextureHeap[mesh.srvTable]);
+            // context.SetDescriptorTable(kMaterialSamplers, s_SamplerHeap[mesh.samplerTable]);
+            if (mesh.numJoints > 0)
+            {
+                ASSERT(object.skeleton != nullptr, "Unspecified joint matrix array");
+                context.SetDynamicSRV(kSkinMatrices, sizeof(Joint) * mesh.numJoints, object.skeleton + mesh.startJoint);
+            }
+            //context.SetPipelineState(sm_PSOs[key.psoIdx]);
+            m_OcclusionPSO = sm_PSOs[key.psoIdx];
+            m_OcclusionPSO.SetBlendState(BlendNoColorWrite);
+            m_OcclusionPSO.SetDepthStencilState(DepthStateReadOnly);
+            m_OcclusionPSO.Finalize();
+            context.SetPipelineState(m_OcclusionPSO);
+            
+
+            context.SetVertexBuffer(0, {object.bufferPtr + mesh.vbOffset, mesh.vbSize, mesh.vbStride});
+
+            context.SetIndexBuffer({object.bufferPtr + mesh.ibOffset, mesh.ibSize, (DXGI_FORMAT)mesh.ibFormat});
+
+            for (uint32_t i = 0; i < mesh.numDraws; ++i)
+            {
+                context.DrawIndexed(mesh.draw[i].primCount, mesh.draw[i].startIndex, mesh.draw[i].baseVertex);
+            }
+
+            ++m_CurrentDraw;
+        }
+    }
+}
+
+void MeshSorter::RenderMeshes(
+    DrawPass pass,
+    GraphicsContext& context,
+    GlobalConstants& globals)
+{
+    ASSERT(m_DSV != nullptr);
+
+    Renderer::UpdateGlobalDescriptors();
+
+
+    context.SetRootSignature(m_RootSig);
+    context.SetPrimitiveTopology(SetTopologyTypeToLine
+                                     ? D3D_PRIMITIVE_TOPOLOGY_LINELIST
+                                     : D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    context.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, s_TextureHeap.GetHeapPointer());
+    context.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, s_SamplerHeap.GetHeapPointer());
+
+    // Set common textures
+    context.SetDescriptorTable(kCommonSRVs, m_CommonTextures);
+
+    // Set common shader constants
+    globals.ViewProjMatrix = m_Camera->GetViewProjMatrix();
+    globals.CameraPos = m_Camera->GetPosition();
+    globals.IBLRange = s_SpecularIBLRange - s_SpecularIBLBias;
+    globals.IBLBias = s_SpecularIBLBias;
+    context.SetDynamicConstantBufferView(kCommonCBV, sizeof(GlobalConstants), &globals);
+
+    if (m_BatchType == kShadows)
+    {
+        context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
+        context.ClearDepth(*m_DSV);
+        context.SetDepthStencilTarget(m_DSV->GetDSV());
+
+        if (m_Viewport.Width == 0)
+        {
+            m_Viewport.TopLeftX = 0.0f;
+            m_Viewport.TopLeftY = 0.0f;
+            m_Viewport.Width = (float)m_DSV->GetWidth();
+            m_Viewport.Height = (float)m_DSV->GetHeight();
+            m_Viewport.MaxDepth = 1.0f;
+            m_Viewport.MinDepth = 0.0f;
+
+            m_Scissor.left = 1;
+            m_Scissor.right = m_DSV->GetWidth() - 2;
+            m_Scissor.top = 1;
+            m_Scissor.bottom = m_DSV->GetHeight() - 2;
+        }
+    }
+    else
+    {
+        for (uint32_t i = 0; i < m_NumRTVs; ++i)
+        {
+            ASSERT(m_RTV[i] != nullptr);
+            ASSERT(m_DSV->GetWidth() == m_RTV[i]->GetWidth());
+            ASSERT(m_DSV->GetHeight() == m_RTV[i]->GetHeight());
+        }
+
+        if (m_Viewport.Width == 0)
+        {
+            m_Viewport.TopLeftX = 0.0f;
+            m_Viewport.TopLeftY = 0.0f;
+            m_Viewport.Width = (float)m_DSV->GetWidth();
+            m_Viewport.Height = (float)m_DSV->GetHeight();
+            m_Viewport.MaxDepth = 1.0f;
+            m_Viewport.MinDepth = 0.0f;
+
+            m_Scissor.left = 0;
+            m_Scissor.right = m_DSV->GetWidth();
+            m_Scissor.top = 0;
+            m_Scissor.bottom = m_DSV->GetWidth();
+        }
+    }
+
+    for (; m_CurrentPass <= pass; m_CurrentPass = (DrawPass)(m_CurrentPass + 1))
+    {
+        const uint32_t passCount = m_PassCounts[m_CurrentPass];
+        if (passCount == 0)
+            continue;
+
+        if (m_BatchType == kDefault)
+        {
+            switch (m_CurrentPass)
+            {
+            case kZPass:
+                context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+                context.SetDepthStencilTarget(m_DSV->GetDSV());
+                break;
+            case kOpaque:
+                if (SeparateZPass)
+                {
+                    context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_DEPTH_READ);
+                    context.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+                    context.SetRenderTarget(g_SceneColorBuffer.GetRTV(), m_DSV->GetDSV_DepthReadOnly());
+                }
+                else
+                {
+                    context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+                    context.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+                    context.SetRenderTarget(g_SceneColorBuffer.GetRTV(), m_DSV->GetDSV());
+                }
+                break;
+            case kTransparent:
+                context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_DEPTH_READ);
+                context.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+                context.SetRenderTarget(g_SceneColorBuffer.GetRTV(), m_DSV->GetDSV_DepthReadOnly());
+                break;
+            }
+        }
 
         context.SetViewportAndScissor(m_Viewport, m_Scissor);
         context.FlushResourceBarriers();
@@ -687,16 +836,18 @@ void MeshSorter::RenderMeshes(
             context.SetIndexBuffer({object.bufferPtr + mesh.ibOffset, mesh.ibSize, (DXGI_FORMAT)mesh.ibFormat});
 
             for (uint32_t i = 0; i < mesh.numDraws; ++i)
+            {
                 context.DrawIndexed(mesh.draw[i].primCount, mesh.draw[i].startIndex, mesh.draw[i].baseVertex);
+            }
 
             ++m_CurrentDraw;
         }
     }
 
-	if (m_BatchType == kShadows)
-	{
-		context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	}
+    if (m_BatchType == kShadows)
+    {
+        context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    }
 }
 
 void MeshSorter::RenderMeshes(
@@ -705,7 +856,7 @@ void MeshSorter::RenderMeshes(
     GlobalConstants& globals,
     const Matrix4& viewprojmat)
 {
-	ASSERT(m_DSV != nullptr);
+    ASSERT(m_DSV != nullptr);
 
     Renderer::UpdateGlobalDescriptors();
 
@@ -718,94 +869,94 @@ void MeshSorter::RenderMeshes(
     context.SetDescriptorTable(kCommonSRVs, m_CommonTextures);
 
     // Set common shader constants
-	globals.ViewProjMatrix = m_Camera->GetViewProjMatrix();
-	globals.ViewProjMatrix = viewprojmat;
-	globals.CameraPos = m_Camera->GetPosition();
+    globals.ViewProjMatrix = m_Camera->GetViewProjMatrix();
+    globals.ViewProjMatrix = viewprojmat;
+    globals.CameraPos = m_Camera->GetPosition();
     globals.IBLRange = s_SpecularIBLRange - s_SpecularIBLBias;
     globals.IBLBias = s_SpecularIBLBias;
-	context.SetDynamicConstantBufferView(kCommonCBV, sizeof(GlobalConstants), &globals);
+    context.SetDynamicConstantBufferView(kCommonCBV, sizeof(GlobalConstants), &globals);
 
-	if (m_BatchType == kShadows)
-	{
-		context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
-		context.ClearDepth(*m_DSV);
-		context.SetDepthStencilTarget(m_DSV->GetDSV());
+    if (m_BatchType == kShadows)
+    {
+        context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
+        context.ClearDepth(*m_DSV);
+        context.SetDepthStencilTarget(m_DSV->GetDSV());
 
-		if (m_Viewport.Width == 0)
-		{
-			m_Viewport.TopLeftX = 0.0f;
-			m_Viewport.TopLeftY = 0.0f;
-			m_Viewport.Width = (float)m_DSV->GetWidth();
-			m_Viewport.Height = (float)m_DSV->GetHeight();
-			m_Viewport.MaxDepth = 1.0f;
-			m_Viewport.MinDepth = 0.0f;
+        if (m_Viewport.Width == 0)
+        {
+            m_Viewport.TopLeftX = 0.0f;
+            m_Viewport.TopLeftY = 0.0f;
+            m_Viewport.Width = (float)m_DSV->GetWidth();
+            m_Viewport.Height = (float)m_DSV->GetHeight();
+            m_Viewport.MaxDepth = 1.0f;
+            m_Viewport.MinDepth = 0.0f;
 
-			m_Scissor.left = 1;
-			m_Scissor.right = m_DSV->GetWidth() - 2;
-			m_Scissor.top = 1;
-			m_Scissor.bottom = m_DSV->GetHeight() - 2;
-		}
-	}
-	else
-	{
-		for (uint32_t i = 0; i < m_NumRTVs; ++i)
-		{
-			ASSERT(m_RTV[i] != nullptr);
-			ASSERT(m_DSV->GetWidth() == m_RTV[i]->GetWidth());
-			ASSERT(m_DSV->GetHeight() == m_RTV[i]->GetHeight());
-		}
+            m_Scissor.left = 1;
+            m_Scissor.right = m_DSV->GetWidth() - 2;
+            m_Scissor.top = 1;
+            m_Scissor.bottom = m_DSV->GetHeight() - 2;
+        }
+    }
+    else
+    {
+        for (uint32_t i = 0; i < m_NumRTVs; ++i)
+        {
+            ASSERT(m_RTV[i] != nullptr);
+            ASSERT(m_DSV->GetWidth() == m_RTV[i]->GetWidth());
+            ASSERT(m_DSV->GetHeight() == m_RTV[i]->GetHeight());
+        }
 
-		if (m_Viewport.Width == 0)
-		{
-			m_Viewport.TopLeftX = 0.0f;
-			m_Viewport.TopLeftY = 0.0f;
-			m_Viewport.Width = (float)m_DSV->GetWidth();
-			m_Viewport.Height = (float)m_DSV->GetHeight();
-			m_Viewport.MaxDepth = 1.0f;
-			m_Viewport.MinDepth = 0.0f;
+        if (m_Viewport.Width == 0)
+        {
+            m_Viewport.TopLeftX = 0.0f;
+            m_Viewport.TopLeftY = 0.0f;
+            m_Viewport.Width = (float)m_DSV->GetWidth();
+            m_Viewport.Height = (float)m_DSV->GetHeight();
+            m_Viewport.MaxDepth = 1.0f;
+            m_Viewport.MinDepth = 0.0f;
 
-			m_Scissor.left = 0;
-			m_Scissor.right = m_DSV->GetWidth();
-			m_Scissor.top = 0;
-			m_Scissor.bottom = m_DSV->GetWidth();
-		}
-	}
+            m_Scissor.left = 0;
+            m_Scissor.right = m_DSV->GetWidth();
+            m_Scissor.top = 0;
+            m_Scissor.bottom = m_DSV->GetWidth();
+        }
+    }
 
-    for ( ; m_CurrentPass <= pass; m_CurrentPass = (DrawPass)(m_CurrentPass + 1))
+    for (; m_CurrentPass <= pass; m_CurrentPass = (DrawPass)(m_CurrentPass + 1))
     {
         const uint32_t passCount = m_PassCounts[m_CurrentPass];
         if (passCount == 0)
             continue;
 
-		if (m_BatchType == kDefault)
-		{
-			switch (m_CurrentPass)
-			{
-			case kZPass:
-				context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-				context.SetDepthStencilTarget(m_DSV->GetDSV());
-				break;
-			case kOpaque:
-				if (SeparateZPass)
-				{
-					context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_DEPTH_READ);
-					context.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
-					context.SetRenderTarget(g_SceneColorBuffer.GetRTV(), m_DSV->GetDSV_DepthReadOnly());
-				}
-				else
-				{
-					context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-					context.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
-					context.SetRenderTarget(g_SceneColorBuffer.GetRTV(), m_DSV->GetDSV());
-				}
-				break;
-			case kTransparent:
-				context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_DEPTH_READ);
-				context.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
-				context.SetRenderTarget(g_SceneColorBuffer.GetRTV(), m_DSV->GetDSV_DepthReadOnly());
-				break;
-			}
-		}
+        if (m_BatchType == kDefault)
+        {
+            switch (m_CurrentPass)
+            {
+            case kZPass:
+                context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+                context.SetDepthStencilTarget(m_DSV->GetDSV());
+                break;
+            case kOpaque:
+                if (SeparateZPass)
+                {
+                    context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_DEPTH_READ);
+                    context.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+                    context.SetRenderTarget(g_SceneColorBuffer.GetRTV(), m_DSV->GetDSV_DepthReadOnly());
+                }
+                else
+                {
+                    context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+                    context.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+                    context.SetRenderTarget(g_SceneColorBuffer.GetRTV(), m_DSV->GetDSV());
+                }
+                break;
+            case kTransparent:
+                context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_DEPTH_READ);
+                context.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+                context.SetRenderTarget(g_SceneColorBuffer.GetRTV(), m_DSV->GetDSV_DepthReadOnly());
+                break;
+            }
+        }
 
         context.SetViewportAndScissor(m_Viewport, m_Scissor);
         context.FlushResourceBarriers();
@@ -852,8 +1003,8 @@ void MeshSorter::RenderMeshes(
         }
     }
 
-	if (m_BatchType == kShadows)
-	{
-		context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	}
+    if (m_BatchType == kShadows)
+    {
+        context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    }
 }

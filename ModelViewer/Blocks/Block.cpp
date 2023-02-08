@@ -18,11 +18,12 @@ Block& Block::operator=(const Block& block)
 
 void Block::Update(GraphicsContext& gfxContext, float deltaT)
 {
-    if (model.IsNull())
+    if (model.IsNull() || !isDirt)
     {
         return;
     }
     model.Update(gfxContext, deltaT);
+    isDirt = false;
 }
 
 void Block::Render(Renderer::MeshSorter& sorter)

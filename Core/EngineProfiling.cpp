@@ -22,6 +22,7 @@
 #include <vector>
 #include <unordered_map>
 #include <array>
+#include <iostream>
 
 using namespace Graphics;
 using namespace GraphRenderer;
@@ -297,7 +298,7 @@ public:
         m_EndTick = SystemTime::GetCurrentTick();
         if (Context == nullptr)
             return;
-
+        std::wcout << m_Name << ": " << m_EndTick-m_StartTick << std::endl;
         m_GpuTimer.Stop(*Context);
 
         Context->PIXEndEvent();
@@ -424,7 +425,7 @@ namespace EngineProfiling
     BoolVar DrawFrameRate("Display Frame Rate", true);
     BoolVar DrawProfiler("Display Profiler", false);
     //BoolVar DrawPerfGraph("Display Performance Graph", false);
-    const bool DrawPerfGraph = false;
+    const bool DrawPerfGraph = true;
     
     void Update( void )
     {

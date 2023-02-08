@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 
+#include "ShadowCamera.h"
 #include "../Blocks/Block.h"
 #include "Math/Vector.h"
 
@@ -26,7 +27,16 @@ public:
     void InitBlocks();
 
     void Update(GraphicsContext& gfxContext, float deltaTime);
-    void Render(Renderer::MeshSorter& sorter);
+    void SpreadAdjacent2OuterAir(int x, int y, int z, std::vector<std::vector<std::vector<int>>>& blockStatus);
+    void SearchBlocksAdjacent2OuterAir();
+    void RenderBlocksInRange(int minX, int maxX, int minY, int maxY, int minZ, int maxZ, Renderer::MeshSorter& sorter,
+                            const Math::Camera& camera);
+    void RenderBlocksInRangeNoIntersectCheck(int minX, int maxX, int minY, int maxY, int minZ, int maxZ,
+                                             Renderer::MeshSorter& sorter, const Math::Camera& camera);
+    void OctreeRenderBlocks(int minX, int maxX, int minY, int maxY, int minZ, int maxZ, int depth,
+                            Renderer::MeshSorter& sorter, const Math::Camera& camera);
+    void Render(Renderer::MeshSorter& sorter, const Math::Camera& m_Camera);
+    void Render(Renderer::MeshSorter& sorter, const Math::Camera& camera, const ShadowCamera& shadowCamera);
     void CleanUp();
 
 
@@ -36,4 +46,6 @@ public:
     std::vector<std::vector<std::vector<Block>>> blocks{};
 
 private:
+
+    int count = 0;
 };

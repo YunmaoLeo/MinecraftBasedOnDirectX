@@ -1,5 +1,4 @@
-﻿
-/**
+﻿/**
  * 管理所有Block静态资源
  * 1. 负责从静态资源中加载Block
  * 2. 负责所有Block的存储、读取
@@ -18,24 +17,26 @@ namespace BlockResourceManager
 
     enum BlockType
     {
+        TBall,
         Diamond,
+
+        Dirt,
         Stone,
         Wood,
-        Dirt,
+        Grass,
+
         RedStoneLamp,
         Torch,
 
 
-        Grass,
         BlocksCount,
     };
 
     extern std::unordered_map<BlockType, ModelInstance> m_BlockMap;
 
     extern std::unordered_map<BlockType, std::string> BlockNameMap;
-    
+
     void initBlocks();
 
     ModelInstance getBlock(BlockType);
-    
 };
