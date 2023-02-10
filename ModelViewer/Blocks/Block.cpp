@@ -32,6 +32,7 @@ void Block::Render(Renderer::MeshSorter& sorter)
     {
         return;
     }
+    
     model.Render(sorter);
 }
 

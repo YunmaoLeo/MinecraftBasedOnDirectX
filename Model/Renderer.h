@@ -114,6 +114,7 @@ namespace Renderer
 
 		void RenderMeshes(DrawPass pass, GraphicsContext& context, GlobalConstants& globals);
 		void RenderMeshes(DrawPass pass, GraphicsContext& context, GlobalConstants& globals, const Matrix4& viewprojmat);
+		void ClearMeshes();
 
 	private:
 

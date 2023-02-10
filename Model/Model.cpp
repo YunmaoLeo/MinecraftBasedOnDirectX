@@ -41,7 +41,7 @@ void Model::Render(
     // Pointer to current mesh
     const uint8_t* pMesh = m_MeshData.get();
 
-    const Frustum& frustum = sorter.GetViewFrustum();
+    // const Frustum& frustum = sorter.GetViewFrustum();
     const AffineTransform& viewMat = (const AffineTransform&)sorter.GetViewMatrix();
 
     for (uint32_t i = 0; i < m_NumMeshes; ++i)
@@ -53,14 +53,14 @@ void Model::Render(
         BoundingSphere sphereWS = sphereXform * sphereLS;
         BoundingSphere sphereVS = BoundingSphere(viewMat * sphereWS.GetCenter(), sphereWS.GetRadius());
 
-        if (frustum.IntersectSphere(sphereVS))
-        {
+        // if (frustum.IntersectSphere(sphereVS))
+        // {
             float distance = -sphereVS.GetCenter().GetZ() - sphereVS.GetRadius();
             sorter.AddMesh(mesh, distance,
                 meshConstants.GetGpuVirtualAddress() + sizeof(MeshConstants) * mesh.meshCBV,
                 m_MaterialConstants.GetGpuVirtualAddress() + sizeof(MaterialConstants) * mesh.materialCBV,
                 m_DataBuffer.GetGpuVirtualAddress(), skeleton);
-        }
+        // }
 
         pMesh += sizeof(Mesh) + (mesh.numDraws - 1) * sizeof(Mesh::Draw);
     }
