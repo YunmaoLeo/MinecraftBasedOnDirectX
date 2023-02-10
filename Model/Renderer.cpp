@@ -239,7 +239,7 @@ void Renderer::Initialize(void)
     m_DefaultPSO.SetRenderTargetFormats(1, &ColorFormat, DepthFormat);
     m_DefaultPSO.SetVertexShader(g_pDefaultVS, sizeof(g_pDefaultVS));
     m_DefaultPSO.SetPixelShader(g_pDefaultPS, sizeof(g_pDefaultPS));
-    
+
     // Skybox PSO
 
     m_SkyboxPSO = m_DefaultPSO;
@@ -597,12 +597,12 @@ void MeshSorter::Sort()
 void MeshSorter::RenderMeshesForOcclusion(
     DrawPass pass,
     GraphicsContext& context,
-                                          GlobalConstants& globals)
+    GlobalConstants& globals)
 {
-        ASSERT(m_DSV != nullptr);
+    ASSERT(m_DSV != nullptr);
 
     Renderer::UpdateGlobalDescriptors();
-    
+
     context.SetRootSignature(m_RootSig);
     context.SetPrimitiveTopology(SetTopologyTypeToLine
                                      ? D3D_PRIMITIVE_TOPOLOGY_LINELIST
@@ -672,7 +672,7 @@ void MeshSorter::RenderMeshesForOcclusion(
             m_OcclusionPSO.SetDepthStencilState(DepthStateReadOnly);
             m_OcclusionPSO.Finalize();
             context.SetPipelineState(m_OcclusionPSO);
-            
+
 
             context.SetVertexBuffer(0, {object.bufferPtr + mesh.vbOffset, mesh.vbSize, mesh.vbStride});
 
@@ -1007,4 +1007,13 @@ void MeshSorter::RenderMeshes(
     {
         context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     }
+}
+
+void MeshSorter::ClearMeshes()
+{
+    m_SortObjects.clear();
+    m_SortKeys.clear();
+    std::memset(m_PassCounts, 0, sizeof(m_PassCounts));
+    m_CurrentPass = kZPass;
+    m_CurrentDraw = 0;
 }

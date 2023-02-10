@@ -86,7 +86,6 @@ ExpVar g_SunLightIntensity("Viewer/Lighting/Sun Light Intensity", 4.0f, 0.0f, 16
 NumVar g_SunOrientation("Viewer/Lighting/Sun Orientation", -0.5f, -100.0f, 100.0f, 0.1f);
 NumVar g_SunInclination("Viewer/Lighting/Sun Inclination", 0.75f, 0.0f, 1.0f, 0.01f);
 NumVar ModelUnitSize("Model/Unit Size", 500.0f, 100.0f, 1000.0f, 100.0f);
-BoolVar openOcclusionCulling("Model/OcclusionOpen", true);
 
 void ChangeIBLSet(EngineVar::ActionType);
 void ChangeIBLBias(EngineVar::ActionType);
@@ -160,11 +159,6 @@ void LoadIBLTextures()
         g_IBLSet.Increment();
 }
 
-
-ID3D12Resource* m_queryResult;
-ID3D12QueryHeap* m_queryHeap;
-D3D12_QUERY_HEAP_DESC occlusionQueryHeapDesc = {};
-
 void ModelViewer::Startup(void)
 {
     // 初始化动态模糊
@@ -204,11 +198,8 @@ void ModelViewer::Startup(void)
     else
     {
         // Load Model
-        world_block = WorldBlock(Vector3(0, 0, 0), 2);
+        world_block = WorldBlock(Vector3(0, 0, 0), 15);
         std::cout << "blockSize" << world_block.blocks.size() << std::endl;
-        m_ModelInst = BlockResourceManager::getBlock(BlockResourceManager::Torch).m_Model;
-        m_ModelInst.Resize(300.0f);
-        m_ModelInst.Translate({0,0,0});
         MotionBlur::Enable = false;
         //Lighting::CreateRandomLights(m_ModelInst.m_Model->m_BoundingBox.GetMin(),m_ModelInst.m_Model->m_BoundingBox.GetMax());
     }
@@ -221,21 +212,6 @@ void ModelViewer::Startup(void)
     }
     else
         m_CameraController.reset(new OrbitCamera(m_Camera, m_ModelInst.GetBoundingSphere(), Vector3(kYUnitVector)));
-
-    occlusionQueryHeapDesc.Count = 3;
-    occlusionQueryHeapDesc.Type = D3D12_QUERY_HEAP_TYPE_OCCLUSION;
-    g_Device->CreateQueryHeap(&occlusionQueryHeapDesc, IID_PPV_ARGS(&m_queryHeap));
-
-    CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
-    auto queryBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(8 * 3);
-    g_Device->CreateCommittedResource(
-        &heapProps,
-        D3D12_HEAP_FLAG_NONE,
-        &queryBufferDesc,
-        D3D12_RESOURCE_STATE_GENERIC_READ,
-        nullptr,
-        IID_PPV_ARGS(&m_queryResult)
-        );
 }
 
 void ModelViewer::Cleanup(void)
@@ -266,8 +242,7 @@ void ModelViewer::Update(float deltaT)
     m_CameraController->Update(deltaT);
 
     GraphicsContext& gfxContext = GraphicsContext::Begin(L"Scene Update");
-
-    m_ModelInst.Update(gfxContext, deltaT);
+    
     world_block.Update(gfxContext, deltaT);
 
     gfxContext.Finish();
@@ -350,38 +325,19 @@ void ModelViewer::RenderScene(void)
     sorter.SetDepthStencilTarget(g_SceneDepthBuffer);
     sorter.AddRenderTarget(g_SceneColorBuffer);
 
-    MeshSorter sorter2(MeshSorter::kDefault);
-    sorter2.SetCamera(m_Camera);
-    sorter2.SetViewport(viewport);
-    sorter2.SetScissor(scissor);
-    sorter2.SetDepthStencilTarget(g_SceneDepthBuffer);
-    sorter2.AddRenderTarget(g_SceneColorBuffer);
-
     // m_ModelInst.Render(sorter);
     {
         ScopedTimer _BlocksRenderProf(L"BlocksRenderToSorter", gfxContext);
-        // world_block.Render(sorter, m_Camera);
-        world_block.blocks[0][0][0].Render(sorter);
-        world_block.blocks[0][0][1].Render(sorter2);
-        world_block.blocks[0][1][0].Render(sorter2);
-        world_block.blocks[1][0][0].Render(sorter2);
-        m_ModelInst.Render(sorter2);
+        world_block.Render(sorter, m_Camera, gfxContext);
     }
 
     {
         ScopedTimer _sortProf(L"Sorter sorts", gfxContext);
         sorter.Sort();
-        sorter2.Sort();
     }
     {
         ScopedTimer _prof(L"Depth Pre-Pass", gfxContext);
-        if (openOcclusionCulling)
-        {
-            gfxContext.SetPredication(m_queryResult, 0,D3D12_PREDICATION_OP_EQUAL_ZERO);
-        }sorter.RenderMeshes(MeshSorter::kZPass, gfxContext, globals);
-        gfxContext.SetPredication(nullptr, 0,D3D12_PREDICATION_OP_EQUAL_ZERO);
-        // gfxContext.SetPredication(m_queryResult, 8,D3D12_PREDICATION_OP_EQUAL_ZERO);
-        sorter2.RenderMeshes(MeshSorter::kZPass, gfxContext, globals);
+        sorter.RenderMeshes(MeshSorter::kZPass, gfxContext, globals);
     }
 
     SSAO::Render(gfxContext, m_Camera);
@@ -416,45 +372,16 @@ void ModelViewer::RenderScene(void)
             gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_READ);
             gfxContext.SetRenderTarget(g_SceneColorBuffer.GetRTV(), g_SceneDepthBuffer.GetDSV_DepthReadOnly());
             gfxContext.SetViewportAndScissor(viewport, scissor);
-
-            if (openOcclusionCulling)
-            {
-                gfxContext.SetPredication(m_queryResult, 0,D3D12_PREDICATION_OP_EQUAL_ZERO);
-            }
+            
             sorter.RenderMeshes(MeshSorter::kOpaque, gfxContext, globals);
-            gfxContext.SetPredication(nullptr, 0,D3D12_PREDICATION_OP_EQUAL_ZERO);
-            sorter2.RenderMeshes(MeshSorter::kOpaque, gfxContext, globals);
         }
 
         Renderer::DrawSkybox(gfxContext, m_Camera, viewport, scissor);
         //
-        // sorter.RenderMeshes(MeshSorter::kTransparent, gfxContext, globals);
+         sorter.RenderMeshes(MeshSorter::kTransparent, gfxContext, globals);
     }
-    {
-        MeshSorter sorter3(MeshSorter::kDefault);
-        sorter3.SetCamera(m_Camera);
-        sorter3.SetViewport(viewport);
-        sorter3.SetScissor(scissor);
-        sorter3.SetDepthStencilTarget(g_SceneDepthBuffer);
-        
-        Block& block = world_block.blocks[0][0][0];
-        block.Render(sorter3);
-        // block.model.m_Model
-        // world_block.blocks[0][0][0].model.Resize(World::UnitBlockRadius);
-        sorter3.Sort();
-        
-
-        gfxContext.BeginQuery(m_queryHeap, D3D12_QUERY_TYPE_BINARY_OCCLUSION, 0);
-        // sorter3.RenderMeshes(MeshSorter::kOpaque, gfxContext, globals);
-        sorter3.RenderMeshesForOcclusion(MeshSorter::kOpaque, gfxContext, globals);
-        gfxContext.EndQuery(m_queryHeap, D3D12_QUERY_TYPE_BINARY_OCCLUSION, 0);
-
-        // block.model.Translate(Vector3(50,50,50));
-        
-        gfxContext.GetCommandList()->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_queryResult, D3D12_RESOURCE_STATE_PREDICATION, D3D12_RESOURCE_STATE_COPY_DEST));
-        gfxContext.GetCommandList()->ResolveQueryData(m_queryHeap, D3D12_QUERY_TYPE_BINARY_OCCLUSION, 0, 1, m_queryResult, 0);
-        gfxContext.GetCommandList()->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_queryResult, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PREDICATION));
-    }
+    //
+    world_block.CheckOcclusion(sorter, gfxContext, globals);
 
     // Some systems generate a per-pixel velocity buffer to better track dynamic and skinned meshes.  Everything
     // is static in our scene, so we generate velocity from camera motion and the depth buffer.  A velocity buffer
