@@ -153,50 +153,90 @@ void WorldBlock::SearchBlocksAdjacent2OuterAir()
     }
 }
 
-void WorldBlock::RenderSingleBlock(int x, int y, int z, Renderer::MeshSorter& sorter)
+bool WorldBlock::CheckOutOfRange(int x, int y, int z) const
 {
-    blocksRenderedVector.push_back(Point(x,y,z));
-    if (EnableOcclusion)
-    {
-        if (GetOcclusionResult(x,y,z))
-        {
-            return;
-        }
-    }
-    count++;
-    blocks[x][y][z].Render(sorter);
+    return x < 0 || x >= worldBlockSize || y < 0 || y >= worldBlockSize || z < 0 || z >= worldBlockDepth;
 }
 
-bool WorldBlock::GetOcclusionResult(int x, int y, int z) const
+void WorldBlock::RenderSingleBlock(int x, int y, int z, Renderer::MeshSorter& sorter)
 {
-    int offset = GetBlockOffsetOnHeap(x,y,z);
-    size_t sizeOffset = offset*sizeof(uint64_t);
+    blocksRenderedVector.push_back(Point(x, y, z));
+    if (EnableOcclusion)
+    {
+        if (!GetUnitBlockOcclusionResultFromVector(x, y, z)
+            || !GetUnitBlockOcclusionResultFromVector(x + 1, y, z)
+            || !GetUnitBlockOcclusionResultFromVector(x - 1, y, z)
+            || !GetUnitBlockOcclusionResultFromVector(x, y + 1, z)
+            || !GetUnitBlockOcclusionResultFromVector(x, y - 1, z)
+            || !GetUnitBlockOcclusionResultFromVector(x, y, z + 1)
+            || !GetUnitBlockOcclusionResultFromVector(x, y, z - 1))
+        {
+            count++;
+            blocks[x][y][z].Render(sorter);
+        }
+    }
+}
+
+void WorldBlock::GetAllBlockOcclusionResult()
+{
+    blocksOcclusionState.resize(worldBlockSize,
+                                std::vector<std::vector<bool>>(worldBlockSize,
+                                                               std::vector<bool>(worldBlockDepth, true)));
+
+    for (auto point : blocksRenderedVector)
+    {
+        int x = point.x;
+        int y = point.y;
+        int z = point.z;
+        blocksOcclusionState[x][y][z] = GetUnitBlockOcclusionResult(x, y, z);
+    }
+}
+
+bool WorldBlock::GetUnitBlockOcclusionResult(int x, int y, int z) const
+{
+    int offset = GetBlockOffsetOnHeap(x, y, z);
+    size_t sizeOffset = offset * sizeof(uint64_t);
     uint64_t* CheckMemory = nullptr;
-    HRESULT result = m_queryReadBackBuffer->Map(0,
-    &CD3DX12_RANGE(sizeOffset,sizeOffset+sizeof(uint64_t)),
-        reinterpret_cast<void**>(&CheckMemory));
-    return *(CheckMemory+offset)==0 ? true : false;
+    m_queryReadBackBuffer->Map(0,
+                               &CD3DX12_RANGE(sizeOffset, sizeOffset + sizeof(uint64_t)),
+                               reinterpret_cast<void**>(&CheckMemory));
+    return *(CheckMemory + offset) == 0 ? true : false;
+}
+
+bool WorldBlock::GetUnitBlockOcclusionResultFromVector(int x, int y, int z) const
+{
+    if (CheckOutOfRange(x,y,z))
+    {
+        return true;
+    }
+    return blocksOcclusionState[x][y][z];
 }
 
 void WorldBlock::CheckOcclusion(Renderer::MeshSorter& sorter, GraphicsContext& context, GlobalConstants& globals)
 {
-    context.GetCommandList()->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_queryResult, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_COPY_DEST));
+    context.GetCommandList()->ResourceBarrier(
+        1, &CD3DX12_RESOURCE_BARRIER::Transition(m_queryResult, D3D12_RESOURCE_STATE_COPY_SOURCE,
+                                                 D3D12_RESOURCE_STATE_COPY_DEST));
     for (auto point : blocksRenderedVector)
     {
         sorter.ClearMeshes();
         int x = point.x;
         int y = point.y;
         int z = point.z;
-        
-        context.BeginQuery(m_queryHeap, D3D12_QUERY_TYPE_BINARY_OCCLUSION, GetBlockOffsetOnHeap(x,y,z));
-    
+
+        context.BeginQuery(m_queryHeap, D3D12_QUERY_TYPE_BINARY_OCCLUSION, GetBlockOffsetOnHeap(x, y, z));
+
         blocks[x][y][z].Render(sorter);
         sorter.Sort();
         sorter.RenderMeshesForOcclusion(Renderer::MeshSorter::kOpaque, context, globals);
-        context.EndQuery(m_queryHeap, D3D12_QUERY_TYPE_BINARY_OCCLUSION,GetBlockOffsetOnHeap(x,y,z));
-        context.GetCommandList()->ResolveQueryData(m_queryHeap, D3D12_QUERY_TYPE_BINARY_OCCLUSION, GetBlockOffsetOnHeap(x,y,z), 1, m_queryResult, GetBlockOffsetOnHeap(x,y,z)*8);
+        context.EndQuery(m_queryHeap, D3D12_QUERY_TYPE_BINARY_OCCLUSION, GetBlockOffsetOnHeap(x, y, z));
+        context.GetCommandList()->ResolveQueryData(m_queryHeap, D3D12_QUERY_TYPE_BINARY_OCCLUSION,
+                                                   GetBlockOffsetOnHeap(x, y, z), 1, m_queryResult,
+                                                   GetBlockOffsetOnHeap(x, y, z) * 8);
     }
-    context.GetCommandList()->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_queryResult, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COPY_SOURCE));
+    context.GetCommandList()->ResourceBarrier(
+        1, &CD3DX12_RESOURCE_BARRIER::Transition(m_queryResult, D3D12_RESOURCE_STATE_COPY_DEST,
+                                                 D3D12_RESOURCE_STATE_COPY_SOURCE));
 }
 
 void WorldBlock::RenderBlocksInRange(int minX, int maxX, int minY, int maxY, int minZ, int maxZ,
@@ -214,7 +254,7 @@ void WorldBlock::RenderBlocksInRange(int minX, int maxX, int minY, int maxY, int
                     && block.adjacent2OuterAir
                     && camera.GetWorldSpaceFrustum().IntersectBoundingBox(block.model.GetAxisAlignedBox()))
                 {
-                    RenderSingleBlock(x,y,z, sorter);
+                    RenderSingleBlock(x, y, z, sorter);
                 }
             }
         }
@@ -235,7 +275,7 @@ void WorldBlock::RenderBlocksInRangeNoIntersectCheck(int minX, int maxX, int min
                 if (!block.IsNull()
                     && block.adjacent2OuterAir)
                 {
-                    RenderSingleBlock(x,y,z, sorter);
+                    RenderSingleBlock(x, y, z, sorter);
                 }
             }
         }
@@ -308,6 +348,7 @@ void WorldBlock::CopyOnReadBackBuffer(GraphicsContext& context)
 void WorldBlock::Render(Renderer::MeshSorter& sorter, const Camera& camera, GraphicsContext& context)
 {
     CopyOnReadBackBuffer(context);
+    GetAllBlockOcclusionResult();
     blocksRenderedVector.clear();
     count = 0;
     if (EnableOctree)
@@ -329,7 +370,7 @@ void WorldBlock::Render(Renderer::MeshSorter& sorter, const Camera& camera, Grap
                         && block.adjacent2OuterAir
                         && camera.GetWorldSpaceFrustum().IntersectBoundingBox(block.model.GetAxisAlignedBox()))
                     {
-                        RenderSingleBlock(x,y,z, sorter);
+                        RenderSingleBlock(x, y, z, sorter);
                     }
                 }
             }

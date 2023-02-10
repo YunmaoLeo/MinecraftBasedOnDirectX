@@ -42,8 +42,11 @@ public:
     int GetBlockOffsetOnHeap(int x, int y, int z) const;
     void SpreadAdjacent2OuterAir(int x, int y, int z, std::vector<std::vector<std::vector<int>>>& blockStatus);
     void SearchBlocksAdjacent2OuterAir();
+    bool CheckOutOfRange(int x, int y, int z) const;
     void RenderSingleBlock(int x, int y, int z, Renderer::MeshSorter& sorter);
-    bool GetOcclusionResult(int x, int y, int z) const;
+    void GetAllBlockOcclusionResult();
+    bool GetUnitBlockOcclusionResult(int x, int y, int z) const;
+    bool GetUnitBlockOcclusionResultFromVector(int x, int y, int z) const;
     void CheckOcclusion(Renderer::MeshSorter& sorter, GraphicsContext& context, GlobalConstants& globals);
     void RenderBlocksInRange(int minX, int maxX, int minY, int maxY, int minZ, int maxZ, Renderer::MeshSorter& sorter,
                              const Math::Camera& camera);
@@ -61,6 +64,7 @@ public:
     uint16_t worldBlockSize = 256;
     uint16_t worldBlockDepth = 10;
     std::vector<std::vector<std::vector<Block>>> blocks{};
+    std::vector<std::vector<std::vector<bool>>> blocksOcclusionState{};
     std::vector<Point> blocksRenderedVector{};
 
 private:
