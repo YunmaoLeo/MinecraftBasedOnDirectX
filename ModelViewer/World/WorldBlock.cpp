@@ -175,6 +175,11 @@ void WorldBlock::RenderSingleBlock(int x, int y, int z, Renderer::MeshSorter& so
             blocks[x][y][z].Render(sorter);
         }
     }
+    else
+    {
+        count++;
+        blocks[x][y][z].Render(sorter);
+    }
 }
 
 void WorldBlock::GetAllBlockOcclusionResult()
