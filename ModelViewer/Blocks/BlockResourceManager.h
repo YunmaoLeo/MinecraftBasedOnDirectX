@@ -17,13 +17,13 @@ namespace BlockResourceManager
 
     enum BlockType
     {
-        TBall,
-        Diamond,
 
+        Diamond,
+        Wood,
+        TBall,
+        Grass,
         Dirt,
         Stone,
-        Wood,
-        Grass,
 
         RedStoneLamp,
         Torch,
@@ -39,4 +39,5 @@ namespace BlockResourceManager
     void initBlocks();
 
     ModelInstance getBlock(BlockType);
+    ModelInstance& getBlockRef(BlockType);
 };

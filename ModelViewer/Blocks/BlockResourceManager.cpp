@@ -49,3 +49,14 @@ ModelInstance BlockResourceManager::getBlock(BlockType type)
     }
     return m_BlockMap[Grass];
 }
+
+ModelInstance& BlockResourceManager::getBlockRef(BlockType type)
+{
+    ASSERT(m_BlocksInitialized);
+
+    if (m_BlockMap.find(type) != m_BlockMap.end())
+    {
+        return m_BlockMap[type];
+    }
+    return m_BlockMap[Grass];
+}

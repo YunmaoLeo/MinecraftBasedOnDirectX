@@ -198,7 +198,7 @@ void ModelViewer::Startup(void)
     else
     {
         // Load Model
-        world_block = WorldBlock(Vector3(0, 0, 0), 15);
+        world_block = WorldBlock(Vector3(0, 0, 0), 80);
         std::cout << "blockSize" << world_block.blocks.size() << std::endl;
         MotionBlur::Enable = false;
         //Lighting::CreateRandomLights(m_ModelInst.m_Model->m_BoundingBox.GetMin(),m_ModelInst.m_Model->m_BoundingBox.GetMax());
@@ -313,7 +313,7 @@ void ModelViewer::RenderScene(void)
     globals.CameraPos = m_Camera.GetPosition();
     globals.SunDirection = SunDirection;
     globals.SunIntensity = Vector3(Scalar(g_SunLightIntensity));
-
+    // world_block.CopyDepthBuffer(gfxContext);
     // Begin rendering depth
     gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
     gfxContext.ClearDepth(g_SceneDepthBuffer);
@@ -324,6 +324,11 @@ void ModelViewer::RenderScene(void)
     sorter.SetScissor(scissor);
     sorter.SetDepthStencilTarget(g_SceneDepthBuffer);
     sorter.AddRenderTarget(g_SceneColorBuffer);
+
+    // {
+    //     ScopedTimer _Prof(L"ReadDepthBufferCost", gfxContext);
+    //     world_block.ReadDepthBuffer(gfxContext);
+    // }
 
     // m_ModelInst.Render(sorter);
     {
@@ -345,20 +350,20 @@ void ModelViewer::RenderScene(void)
     {
         ScopedTimer _outerprof(L"Main Render", gfxContext);
 
-        // {
-        //     ScopedTimer _prof(L"Sun Shadow Map", gfxContext);
-        //
-        //     MeshSorter shadowSorter(MeshSorter::kShadows);
-        //     shadowSorter.SetCamera(m_Camera);
-        //     shadowSorter.SetDepthStencilTarget(g_ShadowBuffer);
-        //
-        //     // m_ModelInst.Render(shadowSorter);
-        //     world_block.Render(shadowSorter, m_Camera);
-        //
-        //     shadowSorter.Sort();
-        //
-        //     shadowSorter.RenderMeshes(MeshSorter::kZPass, gfxContext, globals, m_SunShadow.GetViewProjMatrix());
-        // }
+        {
+            ScopedTimer _prof(L"Sun Shadow Map", gfxContext);
+        
+            MeshSorter shadowSorter(MeshSorter::kShadows);
+            shadowSorter.SetCamera(m_Camera);
+            shadowSorter.SetDepthStencilTarget(g_ShadowBuffer);
+        
+            // m_ModelInst.Render(shadowSorter);
+            world_block.Render(shadowSorter, m_Camera, gfxContext);
+        
+            shadowSorter.Sort();
+        
+            shadowSorter.RenderMeshes(MeshSorter::kZPass, gfxContext, globals, m_SunShadow.GetViewProjMatrix());
+        }
 
         {
         }
@@ -375,14 +380,18 @@ void ModelViewer::RenderScene(void)
             
             sorter.RenderMeshes(MeshSorter::kOpaque, gfxContext, globals);
         }
-
+        
         Renderer::DrawSkybox(gfxContext, m_Camera, viewport, scissor);
         //
          sorter.RenderMeshes(MeshSorter::kTransparent, gfxContext, globals);
     }
-    //
-    world_block.CheckOcclusion(sorter, gfxContext, globals);
+    {
+        ScopedTimer _prof(L"CheckOcclusionRender", gfxContext);
+        if (Renderer::EnableOcclusion)
+        world_block.CheckOcclusion(sorter, gfxContext, globals);
+    }
 
+    gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_COPY_SOURCE);
     // Some systems generate a per-pixel velocity buffer to better track dynamic and skinned meshes.  Everything
     // is static in our scene, so we generate velocity from camera motion and the depth buffer.  A velocity buffer
     // is necessary for all temporal effects (and motion blur).

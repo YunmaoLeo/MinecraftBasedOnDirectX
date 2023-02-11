@@ -136,6 +136,20 @@
     <FxCompile Include="Shaders\DefaultNoUV1VS.hlsl">
       <ShaderType>Vertex</ShaderType>
     </FxCompile>
+    <FxCompile Include="Shaders\DefaultSimplePS.hlsl">
+      <TrackerLogDirectory>F:\C++\MinecraftBasedOnDirectX\ModelViewer\..\Build\x64\Debug\Intermediate\Model\Model.tlog\</TrackerLogDirectory>
+      <EntryPointName>main</EntryPointName>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <ShaderModel>6.2</ShaderModel>
+      <MinimalRebuildFromTracking>true</MinimalRebuildFromTracking>
+      <DisableOptimizations>false</DisableOptimizations>
+      <EnableDebuggingInformation>true</EnableDebuggingInformation>
+      <ShaderType>Pixel</ShaderType>
+      <VariableName>g_p%(Filename)</VariableName>
+      <HeaderFileOutput>F:\C++\MinecraftBasedOnDirectX\ModelViewer\..\Build\x64\Debug\Output\Model\CompiledShaders\%(Filename).h</HeaderFileOutput>
+      <AdditionalOptions>-Qembed_debug </AdditionalOptions>
+      <PreprocessorDefinitions>_GAMING_DESKTOP=1</PreprocessorDefinitions>
+    </FxCompile>
     <FxCompile Include="Shaders\DefaultSkinVS.hlsl">
       <ShaderType>Vertex</ShaderType>
     </FxCompile>

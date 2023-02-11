@@ -17,6 +17,7 @@
 
 #include "Renderer.h"
 #include "ConstantBuffers.h"
+#include "../ModelViewer/Blocks/BlockResourceManager.h"
 
 using namespace Math;
 using namespace Renderer;
@@ -40,6 +41,7 @@ void Model::Render(
 {
     // Pointer to current mesh
     const uint8_t* pMesh = m_MeshData.get();
+    const uint8_t* originMesh = pMesh;
 
     // const Frustum& frustum = sorter.GetViewFrustum();
     const AffineTransform& viewMat = (const AffineTransform&)sorter.GetViewMatrix();
