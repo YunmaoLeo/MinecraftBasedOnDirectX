@@ -45,6 +45,7 @@
 #include "CompiledShaders/CutoutDepthPS.h"
 #include "CompiledShaders/SkyboxVS.h"
 #include "CompiledShaders/SkyboxPS.h"
+#include "CompiledShaders/DefaultSimplePS.h"
 
 #pragma warning(disable:4319) // '~': zero extending 'uint32_t' to 'uint64_t' of greater size
 
@@ -57,7 +58,7 @@ using namespace Renderer;
 namespace Renderer
 {
     BoolVar SeparateZPass("Renderer/Separate Z Pass", true);
-
+    BoolVar EnableOcclusion("Model/EnableOcclusion", false);
     bool s_Initialized = false;
 
     DescriptorHeap s_TextureHeap;
@@ -78,6 +79,14 @@ namespace Renderer
 
     DescriptorHandle m_CommonTextures;
 }
+
+D3D12_INPUT_ELEMENT_DESC posOnly[] =
+{
+    {
+        "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+        D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0
+    },
+};
 
 void Renderer::Initialize(void)
 {
@@ -605,13 +614,13 @@ void MeshSorter::RenderMeshesForOcclusion(
 
     context.SetRootSignature(m_RootSig);
     context.SetPrimitiveTopology(SetTopologyTypeToLine
-                                     ? D3D_PRIMITIVE_TOPOLOGY_LINELIST
+                                     ? D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST
                                      : D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    context.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, s_TextureHeap.GetHeapPointer());
-    context.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, s_SamplerHeap.GetHeapPointer());
-
-    // Set common textures
-    context.SetDescriptorTable(kCommonSRVs, m_CommonTextures);
+    // context.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, s_TextureHeap.GetHeapPointer());
+    // context.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, s_SamplerHeap.GetHeapPointer());
+    //
+    // // Set common textures
+    // context.SetDescriptorTable(kCommonSRVs, m_CommonTextures);
 
     // Set common shader constants
     globals.ViewProjMatrix = m_Camera->GetViewProjMatrix();
@@ -642,7 +651,7 @@ void MeshSorter::RenderMeshesForOcclusion(
             continue;
 
         context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_DEPTH_READ);
-        context.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        // context.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
         context.SetRenderTarget(g_SceneColorBuffer.GetRTV(), m_DSV->GetDSV_DepthReadOnly());
 
         context.SetViewportAndScissor(m_Viewport, m_Scissor);

@@ -36,7 +36,7 @@ struct Joint;
 namespace Renderer
 {
     extern BoolVar SeparateZPass;
-
+	extern BoolVar EnableOcclusion;
     using namespace Math;
 
     extern std::vector<GraphicsPSO> sm_PSOs;

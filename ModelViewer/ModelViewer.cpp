@@ -198,7 +198,7 @@ void ModelViewer::Startup(void)
     else
     {
         // Load Model
-        world_block = WorldBlock(Vector3(0, 0, 0), 80);
+        world_block = WorldBlock(Vector3(0, 0, 0), 2);
         std::cout << "blockSize" << world_block.blocks.size() << std::endl;
         MotionBlur::Enable = false;
         //Lighting::CreateRandomLights(m_ModelInst.m_Model->m_BoundingBox.GetMin(),m_ModelInst.m_Model->m_BoundingBox.GetMax());

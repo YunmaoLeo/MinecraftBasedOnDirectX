@@ -1,5 +1,6 @@
 ﻿#include "WorldBlock.h"
 
+#include "BufferManager.h"
 #include "Renderer.h"
 #include "ShadowCamera.h"
 #include "World.h"
@@ -11,7 +12,6 @@ NumVar MaxOctreeDepth("Octree/Depth", 2, 0, 10, 1);
 NumVar MaxOctreeNodeLength("Octree/Length", 2, 0, 20, 1);
 BoolVar EnableOctree("Octree/EnableOctree", true);
 BoolVar EnableContainTest("Octree/EnableContainTest", true);
-BoolVar EnableOcclusion("Model/EnableOcclusion", true);
 
 void WorldBlock::InitOcclusionQueriesHeaps()
 {
@@ -42,6 +42,43 @@ void WorldBlock::InitOcclusionQueriesHeaps()
         D3D12_RESOURCE_STATE_COPY_DEST,
         nullptr,
         IID_PPV_ARGS(&m_queryReadBackBuffer));
+
+    auto depthBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(Graphics::g_SceneDepthBuffer.GetWidth() * Graphics::g_SceneColorBuffer.GetHeight() * sizeof(float));
+    
+    Graphics::g_Device->CreateCommittedResource(
+        &readBackHeapProps,
+        D3D12_HEAP_FLAG_NONE,
+        &depthBufferDesc,
+        D3D12_RESOURCE_STATE_COPY_DEST,
+        nullptr,
+        IID_PPV_ARGS(&m_depthReadBackBuffer));
+}
+
+void WorldBlock::CopyDepthBuffer(GraphicsContext& context)
+{
+    context.GetCommandList()->CopyResource(m_depthReadBackBuffer, Graphics::g_SceneDepthBuffer.GetResource());
+}
+
+void WorldBlock::ReadDepthBuffer(GraphicsContext& context)
+{
+    uint32_t width = Graphics::g_SceneDepthBuffer.GetWidth();
+    uint32_t height = Graphics::g_SceneDepthBuffer.GetHeight();
+    float* memory;
+    HRESULT result = m_depthReadBackBuffer->Map(0,
+        &CD3DX12_RANGE(0,width * height * 4),
+        reinterpret_cast<void**>(&memory));
+    printf("depthReadResult: %x \n", result);
+    for (uint32_t x=0; x<width; x++)
+    {
+        for (uint32_t y=0; y<height; y++)
+        {
+            uint32_t offset = (y * width + x);
+            if (*(memory+offset)!=0.0f)
+            {
+                std::cout << "depthRead Not null in x: "<<x<<" y: "<<y<<" with value: " << *(memory+offset)<<std::endl;
+            }
+        }
+    }
 }
 
 void WorldBlock::RandomlyGenerateBlocks()
@@ -61,14 +98,6 @@ void WorldBlock::RandomlyGenerateBlocks()
                 int type = generator.NextInt(0, 1);
                 Vector3 pointPos = originPoint + Vector3(x + 0.5f, y + 0.5f, z + 0.5f) * UnitBlockSize;
                 pointPos = Vector3(pointPos.GetX(), pointPos.GetZ(), pointPos.GetY());
-                if (x != 0 || y != 0 || z != 0)
-                {
-                    type = BlockResourceManager::BlockType::Wood;
-                }
-                else
-                {
-                    type = BlockResourceManager::BlockType::TBall;
-                }
                 blocks[x][y][z] = Block(pointPos, BlockResourceManager::BlockType(type), UnitBlockRadius);
                 blocks[x][y][z].model.Resize(World::UnitBlockRadius);
                 blocks[x][y][z].model.Translate(pointPos);
@@ -161,7 +190,7 @@ bool WorldBlock::CheckOutOfRange(int x, int y, int z) const
 void WorldBlock::RenderSingleBlock(int x, int y, int z, Renderer::MeshSorter& sorter)
 {
     blocksRenderedVector.push_back(Point(x, y, z));
-    if (EnableOcclusion)
+    if (Renderer::EnableOcclusion)
     {
         if (!GetUnitBlockOcclusionResultFromVector(x, y, z)
             || !GetUnitBlockOcclusionResultFromVector(x + 1, y, z)
@@ -219,8 +248,9 @@ bool WorldBlock::GetUnitBlockOcclusionResultFromVector(int x, int y, int z) cons
 
 void WorldBlock::CheckOcclusion(Renderer::MeshSorter& sorter, GraphicsContext& context, GlobalConstants& globals)
 {
+    std::cout << "checkOcclusionCount: "<<blocksRenderedVector.size()<<std::endl; 
     context.GetCommandList()->ResourceBarrier(
-        1, &CD3DX12_RESOURCE_BARRIER::Transition(m_queryResult, D3D12_RESOURCE_STATE_COPY_SOURCE,
+        1, &CD3DX12_RESOURCE_BARRIER::Transition(m_queryResult, D3D12_RESOURCE_STATE_PREDICATION,
                                                  D3D12_RESOURCE_STATE_COPY_DEST));
     for (auto point : blocksRenderedVector)
     {
@@ -233,15 +263,22 @@ void WorldBlock::CheckOcclusion(Renderer::MeshSorter& sorter, GraphicsContext& c
 
         blocks[x][y][z].Render(sorter);
         sorter.Sort();
-        sorter.RenderMeshesForOcclusion(Renderer::MeshSorter::kOpaque, context, globals);
+        sorter.RenderMeshesForOcclusion(Renderer::MeshSorter::kZPass, context, globals);
         context.EndQuery(m_queryHeap, D3D12_QUERY_TYPE_BINARY_OCCLUSION, GetBlockOffsetOnHeap(x, y, z));
+    }
+
+    for (auto point:blocksRenderedVector)
+    {
+        int x= point.x;
+        int y = point.y;
+        int z = point.z;
         context.GetCommandList()->ResolveQueryData(m_queryHeap, D3D12_QUERY_TYPE_BINARY_OCCLUSION,
-                                                   GetBlockOffsetOnHeap(x, y, z), 1, m_queryResult,
-                                                   GetBlockOffsetOnHeap(x, y, z) * 8);
+                                           GetBlockOffsetOnHeap(x, y, z), 1, m_queryResult,
+                                           GetBlockOffsetOnHeap(x, y, z) * 8);
     }
     context.GetCommandList()->ResourceBarrier(
         1, &CD3DX12_RESOURCE_BARRIER::Transition(m_queryResult, D3D12_RESOURCE_STATE_COPY_DEST,
-                                                 D3D12_RESOURCE_STATE_COPY_SOURCE));
+                                                 D3D12_RESOURCE_STATE_PREDICATION));
 }
 
 void WorldBlock::RenderBlocksInRange(int minX, int maxX, int minY, int maxY, int minZ, int maxZ,
@@ -257,7 +294,7 @@ void WorldBlock::RenderBlocksInRange(int minX, int maxX, int minY, int maxY, int
 
                 if (!block.IsNull()
                     && block.adjacent2OuterAir
-                    && camera.GetWorldSpaceFrustum().IntersectBoundingBox(block.model.GetAxisAlignedBox()))
+                    && camera.GetWorldSpaceFrustum().IntersectSphere(block.model.GetBoundingSphere()))
                 {
                     RenderSingleBlock(x, y, z, sorter);
                 }
@@ -352,8 +389,12 @@ void WorldBlock::CopyOnReadBackBuffer(GraphicsContext& context)
 
 void WorldBlock::Render(Renderer::MeshSorter& sorter, const Camera& camera, GraphicsContext& context)
 {
-    CopyOnReadBackBuffer(context);
-    GetAllBlockOcclusionResult();
+    if (Renderer::EnableOcclusion)
+    {
+        CopyOnReadBackBuffer(context);
+        GetAllBlockOcclusionResult();
+    }
+
     blocksRenderedVector.clear();
     count = 0;
     if (EnableOctree)

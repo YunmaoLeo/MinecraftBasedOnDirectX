@@ -35,6 +35,8 @@ public:
     WorldBlock(){};
 
     void InitOcclusionQueriesHeaps();
+    void CopyDepthBuffer(GraphicsContext& context);
+    void ReadDepthBuffer(GraphicsContext& context);
     void RandomlyGenerateBlocks();
     void InitBlocks();
 
@@ -62,7 +64,7 @@ public:
 
     Math::Vector3 originPoint;
     uint16_t worldBlockSize = 256;
-    uint16_t worldBlockDepth = 10;
+    uint16_t worldBlockDepth = 1;
     std::vector<std::vector<std::vector<Block>>> blocks{};
     std::vector<std::vector<std::vector<bool>>> blocksOcclusionState{};
     std::vector<Point> blocksRenderedVector{};
@@ -71,5 +73,6 @@ private:
     ID3D12Resource* m_queryResult;
     ID3D12QueryHeap* m_queryHeap;
     ID3D12Resource* m_queryReadBackBuffer;
+    ID3D12Resource* m_depthReadBackBuffer;
     int count = 0;
 };
