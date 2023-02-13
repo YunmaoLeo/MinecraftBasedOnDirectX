@@ -97,6 +97,7 @@
     <ClInclude Include="Math\BoundingSphere.h" />
     <ClInclude Include="Math\Common.h" />
     <ClInclude Include="Math\Frustum.h" />
+    <ClInclude Include="Math\MathHelper.h" />
     <ClInclude Include="Math\Matrix3.h" />
     <ClInclude Include="Math\Matrix4.h" />
     <ClInclude Include="Math\Quaternion.h" />
@@ -128,6 +129,7 @@
     <ClInclude Include="TextureManager.h" />
     <ClInclude Include="UploadBuffer.h" />
     <ClInclude Include="Utility.h" />
+    <ClInclude Include="UtilUploadBuffer.h" />
     <ClInclude Include="Util\CommandLineArg.h" />
     <ClInclude Include="VectorMath.h" />
   </ItemGroup>
@@ -163,6 +165,7 @@
     <ClCompile Include="LinearAllocator.cpp" />
     <ClCompile Include="Math\BoundingSphere.cpp" />
     <ClCompile Include="Math\Frustum.cpp" />
+    <ClCompile Include="Math\MathHelper.cpp" />
     <ClCompile Include="Math\Random.cpp" />
     <ClCompile Include="MotionBlur.cpp" />
     <ClCompile Include="ParticleEffect.cpp" />
@@ -188,6 +191,7 @@
     <ClCompile Include="TextureManager.cpp" />
     <ClCompile Include="UploadBuffer.cpp" />
     <ClCompile Include="Utility.cpp" />
+    <ClCompile Include="UtilUploadBuffer.cpp" />
     <ClCompile Include="Util\CommandLineArg.cpp" />
   </ItemGroup>
   <ItemGroup>

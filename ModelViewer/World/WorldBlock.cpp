@@ -99,8 +99,8 @@ void WorldBlock::RandomlyGenerateBlocks()
                 Vector3 pointPos = originPoint + Vector3(x + 0.5f, y + 0.5f, z + 0.5f) * UnitBlockSize;
                 pointPos = Vector3(pointPos.GetX(), pointPos.GetZ(), pointPos.GetY());
                 blocks[x][y][z] = Block(pointPos, BlockResourceManager::BlockType(type), UnitBlockRadius);
-                blocks[x][y][z].model.Resize(World::UnitBlockRadius);
-                blocks[x][y][z].model.Translate(pointPos);
+                // blocks[x][y][z].model.Resize(World::UnitBlockRadius);
+                // blocks[x][y][z].model.Translate(pointPos);
             }
         }
     }

@@ -16,12 +16,7 @@
 #ifdef ENABLE_SKINNING
 //#undef ENABLE_SKINNING
 #endif
-
-cbuffer MeshConstants : register(b0)
-{
-    float4x4 WorldMatrix;   // Object to world
-    float3x3 WorldIT;       // Object normal to world normal
-};
+StructuredBuffer<InstanceData> gInstanceData: register(t0, space2);
 
 cbuffer GlobalConstants : register(b1)
 {
@@ -58,12 +53,14 @@ struct VSOutput
 #endif
 };
 
-[RootSignature(Renderer_RootSig)]
-VSOutput main(VSInput vsInput)
+// [RootSignature(Renderer_RootSig)]
+VSOutput main(VSInput vsInput, uint instanceID : SV_InstanceID)
 {
     VSOutput vsOutput;
-
+    InstanceData instData = gInstanceData[instanceID];
+    float4x4 WorldMatrix =instData.WorldMatrix;
     float4 position = float4(vsInput.position, 1.0);
+    float3 worldPos = mul(WorldMatrix, position).xyz;
 
 #ifdef ENABLE_SKINNING
     // I don't like this hack.  The weights should be normalized already, but something is fishy.
@@ -78,8 +75,6 @@ VSOutput main(VSInput vsInput)
     position = mul(skinPosMat, position);
 
 #endif
-
-    float3 worldPos = mul(WorldMatrix, position).xyz;
     vsOutput.position = mul(ViewProjMatrix, float4(worldPos, 1.0));
 
 #ifdef ENABLE_ALPHATEST

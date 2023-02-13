@@ -162,12 +162,6 @@
     <FxCompile Include="Shaders\DepthOnlyVS.hlsl">
       <ShaderType>Vertex</ShaderType>
     </FxCompile>
-    <FxCompile Include="Shaders\DepthViewerPS.hlsl">
-      <ShaderType>Pixel</ShaderType>
-    </FxCompile>
-    <FxCompile Include="Shaders\DepthViewerVS.hlsl">
-      <ShaderType>Vertex</ShaderType>
-    </FxCompile>
     <FxCompile Include="Shaders\FillLightGridCS_16.hlsl" />
     <FxCompile Include="Shaders\FillLightGridCS_24.hlsl" />
     <FxCompile Include="Shaders\FillLightGridCS_32.hlsl" />

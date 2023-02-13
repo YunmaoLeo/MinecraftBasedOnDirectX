@@ -265,6 +265,7 @@ float getFilterShadowValue(float3 ShadowCoord, Texture2D<float> texShadow)
 [RootSignature(Renderer_RootSig)]
 float4 main(VSOutput vsOutput) : SV_Target0
 {
+    return float4(0.0f,0.0f,0.0f,0.0f);
 # define SAMPLE_TEX(texName) texName.Sample(defaultSampler, vsOutput.uv0)
     // Load and modulate textures
     float4 baseColor = baseColorFactor * baseColorTexture.Sample(baseColorSampler, UVSET(BASECOLOR));
@@ -318,6 +319,7 @@ float4 main(VSOutput vsOutput) : SV_Target0
 #endif
 
     // TODO: Shade each light using Forward+ tiles
+
     return float4(colorAccum, baseColor.a);
 }
 

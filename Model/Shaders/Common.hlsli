@@ -19,6 +19,13 @@
 // single-iteration loop
 #pragma warning (disable: 3557)
 
+
+struct InstanceData
+{
+	float4x4 WorldMatrix;
+	float3x3 WorldIT;
+};
+
 #define Renderer_RootSig \
     "RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), " \
     "CBV(b0, visibility = SHADER_VISIBILITY_VERTEX), " \
@@ -28,6 +35,7 @@
     "DescriptorTable(SRV(t10, numDescriptors = 10), visibility = SHADER_VISIBILITY_PIXEL)," \
     "CBV(b1), " \
     "SRV(t20, visibility = SHADER_VISIBILITY_VERTEX), " \
+    "SRV(t0, visibility = SHADER_VISIBILITY_VERTEX), "\
     "StaticSampler(s10, maxAnisotropy = 8, visibility = SHADER_VISIBILITY_PIXEL)," \
     "StaticSampler(s11, visibility = SHADER_VISIBILITY_PIXEL," \
         "addressU = TEXTURE_ADDRESS_CLAMP," \

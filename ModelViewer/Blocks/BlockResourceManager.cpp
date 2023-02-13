@@ -32,6 +32,10 @@ void BlockResourceManager::initBlocks()
         std::string BlockPath = BLOCKS_RESOURCE_PATH + BlockName + "/" + "scene.gltf";
 
         const ModelInstance model{Renderer::LoadModel(Utility::ConvertToWideString(BlockPath), true)};
+        std::cout << "ModelCheck blockName: " << BlockName << std::endl; 
+        std::cout << "ModelCheck numJoints: "<<model.m_Model->m_NumJoints <<std::endl;
+        std::cout << "ModelCheck numMeshes: " << model.m_Model->m_NumMeshes << std::endl; 
+        std::cout << "ModelCheck numNodes: "<<model.m_Model->m_NumNodes <<std::endl;
 
         m_BlockMap[type] = model.m_Model;
     }

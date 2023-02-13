@@ -17,13 +17,21 @@ namespace BlockResourceManager
 
     enum BlockType
     {
-
         Diamond,
-        Wood,
-        TBall,
         Grass,
-        Dirt,
         Stone,
+        Dirt,
+
+        Wood,
+
+
+
+
+
+        TBall,
+
+
+
 
         RedStoneLamp,
         Torch,

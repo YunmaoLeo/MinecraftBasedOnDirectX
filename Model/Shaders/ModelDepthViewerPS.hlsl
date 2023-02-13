@@ -40,7 +40,7 @@ struct MRT
 	float3 Normal : SV_Target1;
 };
 
-[RootSignature(Renderer_RootSig)]
+
 MRT main(VSOutput vsOutput)
 {
 	MRT mrt;
