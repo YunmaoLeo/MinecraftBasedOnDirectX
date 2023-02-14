@@ -20,11 +20,13 @@
 #include "TextureManager.h"
 #include "ConstantBuffers.h"
 #include "LightManager.h"
+#include "UtilUploadBuffer.h"
 #include "../Core/RootSignature.h"
 #include "../Core/PipelineState.h"
 #include "../Core/GraphicsCommon.h"
 #include "../Core/BufferManager.h"
 #include "../Core/ShadowCamera.h"
+#include "../ModelViewer/Blocks/BlockResourceManager.h"
 
 #include "CompiledShaders/DefaultVS.h"
 #include "CompiledShaders/DefaultSkinVS.h"
@@ -59,6 +61,7 @@ namespace Renderer
 {
     BoolVar SeparateZPass("Renderer/Separate Z Pass", true);
     BoolVar EnableOcclusion("Model/EnableOcclusion", false);
+    NumVar ModelCount("Model/ModelCount", 1,1,125,1);
     bool s_Initialized = false;
 
     DescriptorHeap s_TextureHeap;
@@ -92,7 +95,7 @@ void Renderer::Initialize(void)
 {
     if (s_Initialized)
         return;
-
+    
     SamplerDesc DefaultSamplerDesc;
     DefaultSamplerDesc.MaxAnisotropy = 8;
 
@@ -113,6 +116,7 @@ void Renderer::Initialize(void)
         InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 10, 10, D3D12_SHADER_VISIBILITY_PIXEL);
     m_RootSig[kCommonCBV].InitAsConstantBuffer(1);
     m_RootSig[kSkinMatrices].InitAsBufferSRV(20, D3D12_SHADER_VISIBILITY_VERTEX);
+    m_RootSig[kInstanceData].InitAsBufferSRV(0, D3D12_SHADER_VISIBILITY_VERTEX,2);
     m_RootSig.Finalize(L"RootSig", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
     DXGI_FORMAT ColorFormat = g_SceneColorBuffer.GetFormat();
@@ -614,7 +618,7 @@ void MeshSorter::RenderMeshesForOcclusion(
 
     context.SetRootSignature(m_RootSig);
     context.SetPrimitiveTopology(SetTopologyTypeToLine
-                                     ? D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST
+                                     ? D3D_PRIMITIVE_TOPOLOGY_LINELIST
                                      : D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     // context.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, s_TextureHeap.GetHeapPointer());
     // context.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, s_SamplerHeap.GetHeapPointer());
@@ -681,8 +685,6 @@ void MeshSorter::RenderMeshesForOcclusion(
             m_OcclusionPSO.SetDepthStencilState(DepthStateReadOnly);
             m_OcclusionPSO.Finalize();
             context.SetPipelineState(m_OcclusionPSO);
-
-
             context.SetVertexBuffer(0, {object.bufferPtr + mesh.vbOffset, mesh.vbSize, mesh.vbStride});
 
             context.SetIndexBuffer({object.bufferPtr + mesh.ibOffset, mesh.ibSize, (DXGI_FORMAT)mesh.ibFormat});
@@ -691,7 +693,6 @@ void MeshSorter::RenderMeshesForOcclusion(
             {
                 context.DrawIndexed(mesh.draw[i].primCount, mesh.draw[i].startIndex, mesh.draw[i].baseVertex);
             }
-
             ++m_CurrentDraw;
         }
     }
@@ -706,14 +707,16 @@ void MeshSorter::RenderMeshes(
 
     Renderer::UpdateGlobalDescriptors();
 
-
+    
     context.SetRootSignature(m_RootSig);
     context.SetPrimitiveTopology(SetTopologyTypeToLine
                                      ? D3D_PRIMITIVE_TOPOLOGY_LINELIST
                                      : D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    BlockResourceManager::InstancesManager& manager = BlockResourceManager::getManager(currentBlockType);
+    context.GetCommandList()->SetGraphicsRootShaderResourceView(kInstanceData, manager.InstanceBuffer->Resource()->GetGPUVirtualAddress());
     context.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, s_TextureHeap.GetHeapPointer());
     context.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, s_SamplerHeap.GetHeapPointer());
-
+    
     // Set common textures
     context.SetDescriptorTable(kCommonSRVs, m_CommonTextures);
 
@@ -818,7 +821,7 @@ void MeshSorter::RenderMeshes(
             const SortObject& object = m_SortObjects[key.objectIdx];
             const Mesh& mesh = *object.mesh;
 
-            context.SetConstantBuffer(kMeshConstants, object.meshCBV);
+            //context.SetConstantBuffer(kMeshConstants, object.meshCBV);
             context.SetConstantBuffer(kMaterialConstants, object.materialCBV);
             context.SetDescriptorTable(kMaterialSRVs, s_TextureHeap[mesh.srvTable]);
             context.SetDescriptorTable(kMaterialSamplers, s_SamplerHeap[mesh.samplerTable]);
@@ -843,12 +846,21 @@ void MeshSorter::RenderMeshes(
             }
 
             context.SetIndexBuffer({object.bufferPtr + mesh.ibOffset, mesh.ibSize, (DXGI_FORMAT)mesh.ibFormat});
-
-            for (uint32_t i = 0; i < mesh.numDraws; ++i)
-            {
-                context.DrawIndexed(mesh.draw[i].primCount, mesh.draw[i].startIndex, mesh.draw[i].baseVertex);
-            }
-
+            // for (uint32_t i = 0; i < mesh.numDraws; ++i)
+            // {
+            //     //context.DrawIndexed(mesh.draw[i].primCount, mesh.draw[i].startIndex, mesh.draw[i].baseVertex);
+            //     std::cout << "checkMesh: primCount: " << mesh.draw[i].primCount<<std::endl;
+            //     std::cout << "checkMesh: startIndex: " << mesh.draw[i].startIndex<<std::endl;
+            //     std::cout << "checkMesh: baseVertex: " << mesh.draw[i].baseVertex<<std::endl;
+            //     std::cout << "checkMesh: vbOffset: " << mesh.vbOffset<<std::endl;
+            //     std::cout << "checkMesh: vbDepthOffset: " << mesh.vbDepthOffset<<std::endl;
+            //     std::cout << "checkMesh: numDraws: " << mesh.numDraws<<std::endl;
+            //     std::cout << "checkMesh: ibOffset " << mesh.ibOffset<<std::endl;
+            // }
+            
+            context.DrawIndexedInstanced(mesh.draw[0].primCount, manager.visibleBlockNumber,0,0,0);
+            // context.DrawIndexedInstanced(36, ModelCount,0,0,1);
+            // context.DrawIndexedInstanced(36, 1,0,0,3);
             ++m_CurrentDraw;
         }
     }
@@ -930,7 +942,8 @@ void MeshSorter::RenderMeshes(
             m_Scissor.bottom = m_DSV->GetWidth();
         }
     }
-
+    BlockResourceManager::InstancesManager& manager = BlockResourceManager::getManager(currentBlockType);
+    context.GetCommandList()->SetGraphicsRootShaderResourceView(kInstanceData, manager.InstanceBuffer->Resource()->GetGPUVirtualAddress());
     for (; m_CurrentPass <= pass; m_CurrentPass = (DrawPass)(m_CurrentPass + 1))
     {
         const uint32_t passCount = m_PassCounts[m_CurrentPass];
@@ -1005,9 +1018,9 @@ void MeshSorter::RenderMeshes(
 
             context.SetIndexBuffer({object.bufferPtr + mesh.ibOffset, mesh.ibSize, (DXGI_FORMAT)mesh.ibFormat});
 
-            for (uint32_t i = 0; i < mesh.numDraws; ++i)
-                context.DrawIndexed(mesh.draw[i].primCount, mesh.draw[i].startIndex, mesh.draw[i].baseVertex);
-
+            // for (uint32_t i = 0; i < mesh.numDraws; ++i)
+            //     context.DrawIndexed(mesh.draw[i].primCount, mesh.draw[i].startIndex, mesh.draw[i].baseVertex);
+            context.DrawIndexedInstanced(mesh.draw[0].primCount, manager.visibleBlockNumber,0,0,0);
             ++m_CurrentDraw;
         }
     }

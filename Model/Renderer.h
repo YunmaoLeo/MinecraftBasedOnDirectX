@@ -24,6 +24,12 @@
 
 #include <d3d12.h>
 
+#include "Model.h"
+#include "UtilUploadBuffer.h"
+#include "../ModelViewer/Blocks/BlockResourceManager.h"
+#include "Math/MathHelper.h"
+
+using namespace BlockResourceManager;
 class GraphicsPSO;
 class RootSignature;
 class DescriptorHeap;
@@ -54,7 +60,7 @@ namespace Renderer
         kCommonSRVs,
         kCommonCBV,
         kSkinMatrices,
-
+		kInstanceData,
         kNumRootBindings
     };
 
@@ -72,6 +78,8 @@ namespace Renderer
     public:
 		enum BatchType { kDefault, kShadows };
         enum DrawPass { kZPass, kOpaque, kTransparent, kNumPasses };
+
+    	BlockType currentBlockType;
 
 		MeshSorter(BatchType type)
 		{
@@ -115,7 +123,6 @@ namespace Renderer
 		void RenderMeshes(DrawPass pass, GraphicsContext& context, GlobalConstants& globals);
 		void RenderMeshes(DrawPass pass, GraphicsContext& context, GlobalConstants& globals, const Matrix4& viewprojmat);
 		void ClearMeshes();
-
 	private:
 
         struct SortKey

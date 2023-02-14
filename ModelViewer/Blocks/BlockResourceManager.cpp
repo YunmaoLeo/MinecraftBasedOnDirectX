@@ -4,12 +4,15 @@
 #include <ostream>
 
 #include "ModelLoader.h"
+#include "../World/World.h"
 
 namespace BlockResourceManager
 {
     bool m_BlocksInitialized = true;
     std::unordered_map<BlockType, std::string> BlockNameMap = {
         {TBall, "tball"},
+        {Leaf, "leaf"},
+        {Water, "water"},
         {Diamond, "diamond"},
         {Dirt, "dirt"},
         {Grass, "grass"},
@@ -19,7 +22,37 @@ namespace BlockResourceManager
         {Wood, "wood"},
     };
     std::unordered_map<BlockType, ModelInstance> m_BlockMap;
+    std::unordered_map<BlockType, InstancesManager> BlocksInstancesManagerMap;
     
+}
+
+void BlockResourceManager::clearVisibleBlocks()
+{
+    for (int i =0; i<BlocksCount; i++)
+    {
+        auto type = static_cast<BlockType>(i);
+        InstancesManager& manager = BlocksInstancesManagerMap[type];
+        manager.visibleBlockNumber = 0;
+    }
+}
+
+void BlockResourceManager::addBlockIntoManager(BlockType blockType, Math::Vector3 position, float radius)
+{
+    InstancesManager& manager = BlocksInstancesManagerMap[blockType];
+    InstanceData data;
+    
+    Math::Matrix4 worldMatrix(Math::kIdentity);
+    Math::UniformTransform locator(Math::kIdentity);
+    locator.SetScale(radius/ getBlockRef(blockType).GetBoundingSphere().GetRadius());
+    locator.SetTranslation(position);   
+    worldMatrix = Math::Matrix4((Math::AffineTransform)locator) * worldMatrix;
+
+    XMStoreFloat4x4(&data.WorldMatrix, XMMATRIX(worldMatrix));
+    Math::Matrix3 worldIT = Math::InverseTranspose(worldMatrix.Get3x3());
+    XMStoreFloat3x3(&data.WorldIT, XMMATRIX(worldIT));
+    
+    manager.InstanceBuffer.get()->CopyData(manager.visibleBlockNumber, data);
+    manager.visibleBlockNumber++;
 }
 
 void BlockResourceManager::initBlocks()
@@ -31,15 +64,17 @@ void BlockResourceManager::initBlocks()
         std::string BlockName = BlockNameMap[type];
         std::string BlockPath = BLOCKS_RESOURCE_PATH + BlockName + "/" + "scene.gltf";
 
-        const ModelInstance model{Renderer::LoadModel(Utility::ConvertToWideString(BlockPath), true)};
+        ModelInstance model{Renderer::LoadModel(Utility::ConvertToWideString(BlockPath), true)};
         std::cout << "ModelCheck blockName: " << BlockName << std::endl; 
         std::cout << "ModelCheck numJoints: "<<model.m_Model->m_NumJoints <<std::endl;
         std::cout << "ModelCheck numMeshes: " << model.m_Model->m_NumMeshes << std::endl; 
         std::cout << "ModelCheck numNodes: "<<model.m_Model->m_NumNodes <<std::endl;
-
         m_BlockMap[type] = model.m_Model;
-    }
 
+        BlocksInstancesManagerMap[type] = InstancesManager();
+        BlocksInstancesManagerMap[type].initManager();
+        ASSERT_SUCCEEDED(BlocksInstancesManagerMap.size()==BlockType::BlocksCount);
+    }
     m_BlocksInitialized = true;
 }
 

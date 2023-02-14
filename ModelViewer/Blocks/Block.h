@@ -18,29 +18,26 @@ public:
     Block& operator=(const Block& block);
 
 
-    void Update(GraphicsContext& gfxContext, float deltaT);
-
-    void Render(Renderer::MeshSorter& sorter);
-    void CleanUp();
-
-    bool IsNull() const
-    {
-        return model.IsNull();
-    }
+    void Update(float deltaT);
+    void ClearUp();
 
     bool isTransparent() const
     {
         return transparent;
     }
 
+    bool IsNull();
 
+    float sideSize;
     float radius;
+    bool isEmpty = true;
     bool isDirt = true;
     bool transparent = false;
     bool adjacent2OuterAir = false;
     Math::Vector3 position;
     BlockResourceManager::BlockType blockType;
-    ModelInstance model;
+    Math::BoundingSphere boundingSphere;
+    Math::AxisAlignedBox axisAlignedBox;
 
 private:
 };

@@ -42,8 +42,8 @@ namespace Math
 
         // Test whether the bounding sphere intersects the frustum.  Intersection is defined as either being
         // fully contained in the frustum, or by intersecting one or more of the planes.
-        bool IntersectSphere( BoundingSphere sphere ) const;
-        bool ContainingSphere(BoundingSphere sphere) const;
+        bool IntersectSphere(BoundingSphere& sphere) const;
+        bool ContainingSphere(BoundingSphere& sphere) const;
 
         // We don't officially have a AxisAlignedBox class yet, but let's assume it's forthcoming.  (There is a
         // simple struct in the Model project.)
@@ -70,7 +70,7 @@ namespace Math
     // Inline implementations
     //
 
-    inline bool Frustum::IntersectSphere( BoundingSphere sphere ) const
+    inline bool Frustum::IntersectSphere( BoundingSphere& sphere ) const
     {
         float radius = sphere.GetRadius();
         for (int i = 0; i < 6; ++i)
@@ -81,7 +81,7 @@ namespace Math
         return true;
     }
 
-    inline bool Frustum::ContainingSphere(BoundingSphere sphere) const
+    inline bool Frustum::ContainingSphere(BoundingSphere& sphere) const
     {
         float radius = sphere.GetRadius();
         for (int i = 0; i < 6; ++i)

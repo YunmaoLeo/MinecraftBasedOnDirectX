@@ -91,16 +91,14 @@ void WorldBlock::RandomlyGenerateBlocks()
         {
             for (int z = 0; z < worldBlockDepth; z++)
             {
-                // if (generator.NextFloat() < 0.3)
-                // {
-                //     continue;
-                // }
-                int type = generator.NextInt(0, 1);
+                if (generator.NextFloat() < 0.3)
+                {
+                    continue;
+                }
+                int type = generator.NextInt(0, 5);
                 Vector3 pointPos = originPoint + Vector3(x + 0.5f, y + 0.5f, z + 0.5f) * UnitBlockSize;
                 pointPos = Vector3(pointPos.GetX(), pointPos.GetZ(), pointPos.GetY());
                 blocks[x][y][z] = Block(pointPos, BlockResourceManager::BlockType(type), UnitBlockRadius);
-                // blocks[x][y][z].model.Resize(World::UnitBlockRadius);
-                // blocks[x][y][z].model.Translate(pointPos);
             }
         }
     }
@@ -113,7 +111,7 @@ void WorldBlock::InitBlocks()
     InitOcclusionQueriesHeaps();
 }
 
-void WorldBlock::Update(GraphicsContext& gfxContext, float deltaTime)
+void WorldBlock::Update(float deltaTime)
 {
     for (int x = 0; x < worldBlockSize; x++)
     {
@@ -121,7 +119,7 @@ void WorldBlock::Update(GraphicsContext& gfxContext, float deltaTime)
         {
             for (int z = 0; z < worldBlockDepth; z++)
             {
-                blocks[x][y][z].Update(gfxContext, deltaTime);
+                blocks[x][y][z].Update(deltaTime);
             }
         }
     }
@@ -187,7 +185,7 @@ bool WorldBlock::CheckOutOfRange(int x, int y, int z) const
     return x < 0 || x >= worldBlockSize || y < 0 || y >= worldBlockSize || z < 0 || z >= worldBlockDepth;
 }
 
-void WorldBlock::RenderSingleBlock(int x, int y, int z, Renderer::MeshSorter& sorter)
+void WorldBlock::RenderSingleBlock(int x, int y, int z)
 {
     blocksRenderedVector.push_back(Point(x, y, z));
     if (Renderer::EnableOcclusion)
@@ -201,13 +199,15 @@ void WorldBlock::RenderSingleBlock(int x, int y, int z, Renderer::MeshSorter& so
             || !GetUnitBlockOcclusionResultFromVector(x, y, z - 1))
         {
             count++;
-            blocks[x][y][z].Render(sorter);
+            Block& block = blocks[x][y][z];
+            BlockResourceManager::addBlockIntoManager(block.blockType, block.position, block.sideSize);
         }
     }
     else
     {
         count++;
-        blocks[x][y][z].Render(sorter);
+        Block& block = blocks[x][y][z];
+        BlockResourceManager::addBlockIntoManager(block.blockType, block.position, block.sideSize);
     }
 }
 
@@ -261,7 +261,7 @@ void WorldBlock::CheckOcclusion(Renderer::MeshSorter& sorter, GraphicsContext& c
 
         context.BeginQuery(m_queryHeap, D3D12_QUERY_TYPE_BINARY_OCCLUSION, GetBlockOffsetOnHeap(x, y, z));
 
-        blocks[x][y][z].Render(sorter);
+        // blocks[x][y][z].Render(sorter);
         sorter.Sort();
         sorter.RenderMeshesForOcclusion(Renderer::MeshSorter::kZPass, context, globals);
         context.EndQuery(m_queryHeap, D3D12_QUERY_TYPE_BINARY_OCCLUSION, GetBlockOffsetOnHeap(x, y, z));
@@ -282,7 +282,7 @@ void WorldBlock::CheckOcclusion(Renderer::MeshSorter& sorter, GraphicsContext& c
 }
 
 void WorldBlock::RenderBlocksInRange(int minX, int maxX, int minY, int maxY, int minZ, int maxZ,
-                                     Renderer::MeshSorter& sorter, const Camera& camera)
+                                     const Camera& camera)
 {
     for (int x = minX; x <= maxX; x++)
     {
@@ -294,17 +294,16 @@ void WorldBlock::RenderBlocksInRange(int minX, int maxX, int minY, int maxY, int
 
                 if (!block.IsNull()
                     && block.adjacent2OuterAir
-                    && camera.GetWorldSpaceFrustum().IntersectSphere(block.model.GetBoundingSphere()))
+                    && camera.GetWorldSpaceFrustum().IntersectSphere(block.boundingSphere))
                 {
-                    RenderSingleBlock(x, y, z, sorter);
+                    RenderSingleBlock(x, y, z);
                 }
             }
         }
     }
 }
 
-void WorldBlock::RenderBlocksInRangeNoIntersectCheck(int minX, int maxX, int minY, int maxY, int minZ, int maxZ,
-                                                     Renderer::MeshSorter& sorter, const Camera& camera)
+void WorldBlock::RenderBlocksInRangeNoIntersectCheck(int minX, int maxX, int minY, int maxY, int minZ, int maxZ)
 {
     for (int x = minX; x <= maxX; x++)
     {
@@ -317,7 +316,7 @@ void WorldBlock::RenderBlocksInRangeNoIntersectCheck(int minX, int maxX, int min
                 if (!block.IsNull()
                     && block.adjacent2OuterAir)
                 {
-                    RenderSingleBlock(x, y, z, sorter);
+                    RenderSingleBlock(x, y, z);
                 }
             }
         }
@@ -326,7 +325,7 @@ void WorldBlock::RenderBlocksInRangeNoIntersectCheck(int minX, int maxX, int min
 
 
 void WorldBlock::OctreeRenderBlocks(int minX, int maxX, int minY, int maxY, int minZ, int maxZ, int depth,
-                                    Renderer::MeshSorter& sorter, const Camera& camera)
+                                    const Camera& camera)
 {
     //check bounding box intersection
     Block& block1 = blocks[minX][minY][minZ];
@@ -339,14 +338,14 @@ void WorldBlock::OctreeRenderBlocks(int minX, int maxX, int minY, int maxY, int 
     Block& block8 = blocks[maxX][maxY][maxZ];
 
     AxisAlignedBox box;
-    box.AddBoundingBox(block1.model.GetAxisAlignedBox());
-    box.AddBoundingBox(block2.model.GetAxisAlignedBox());
-    box.AddBoundingBox(block3.model.GetAxisAlignedBox());
-    box.AddBoundingBox(block4.model.GetAxisAlignedBox());
-    box.AddBoundingBox(block5.model.GetAxisAlignedBox());
-    box.AddBoundingBox(block6.model.GetAxisAlignedBox());
-    box.AddBoundingBox(block7.model.GetAxisAlignedBox());
-    box.AddBoundingBox(block8.model.GetAxisAlignedBox());
+    box.AddBoundingBox(block1.axisAlignedBox);
+    box.AddBoundingBox(block2.axisAlignedBox);
+    box.AddBoundingBox(block3.axisAlignedBox);
+    box.AddBoundingBox(block4.axisAlignedBox);
+    box.AddBoundingBox(block5.axisAlignedBox);
+    box.AddBoundingBox(block6.axisAlignedBox);
+    box.AddBoundingBox(block7.axisAlignedBox);
+    box.AddBoundingBox(block8.axisAlignedBox);
 
     if (!camera.GetWorldSpaceFrustum().IntersectBoundingBox(box))
     {
@@ -355,7 +354,8 @@ void WorldBlock::OctreeRenderBlocks(int minX, int maxX, int minY, int maxY, int 
 
     if (EnableContainTest && camera.GetWorldSpaceFrustum().ContainingBoundingBox(box))
     {
-        RenderBlocksInRangeNoIntersectCheck(minX, maxX, minY, maxY, minZ, maxZ, sorter, camera);
+        std::cout << "pass contain test" << std::endl;
+        RenderBlocksInRangeNoIntersectCheck(minX, maxX, minY, maxY, minZ, maxZ);
         return;
     }
     // if depth > n, then invoke render in range
@@ -363,7 +363,7 @@ void WorldBlock::OctreeRenderBlocks(int minX, int maxX, int minY, int maxY, int 
     if (depth >= MaxOctreeDepth || maxX - minX <= MaxOctreeNodeLength || maxY - minY <= MaxOctreeNodeLength || maxZ -
         minZ <= MaxOctreeNodeLength)
     {
-        RenderBlocksInRange(minX, maxX, minY, maxY, minZ, maxZ, sorter, camera);
+        RenderBlocksInRange(minX, maxX, minY, maxY, minZ, maxZ, camera);
         return;
     }
 
@@ -372,14 +372,14 @@ void WorldBlock::OctreeRenderBlocks(int minX, int maxX, int minY, int maxY, int 
     int middleY = (maxY - minY) / 2 + minY;
     int middleZ = (maxZ - minZ) / 2 + minZ;
 
-    OctreeRenderBlocks(minX, middleX, minY, middleY, minZ, middleZ, depth + 1, sorter, camera);
-    OctreeRenderBlocks(minX, middleX, minY, middleY, middleZ + 1, maxZ, depth + 1, sorter, camera);
-    OctreeRenderBlocks(middleX + 1, maxX, minY, middleY, minZ, middleZ, depth + 1, sorter, camera);
-    OctreeRenderBlocks(middleX + 1, maxX, minY, middleY, middleZ + 1, maxZ, depth + 1, sorter, camera);
-    OctreeRenderBlocks(minX, middleX, middleY + 1, maxY, minZ, middleZ, depth + 1, sorter, camera);
-    OctreeRenderBlocks(minX, middleX, middleY + 1, maxY, middleZ + 1, maxZ, depth + 1, sorter, camera);
-    OctreeRenderBlocks(middleX + 1, maxX, middleY + 1, maxY, minZ, middleZ, depth + 1, sorter, camera);
-    OctreeRenderBlocks(middleX + 1, maxX, middleY + 1, maxY, middleZ + 1, maxZ, depth + 1, sorter, camera);
+    OctreeRenderBlocks(minX, middleX, minY, middleY, minZ, middleZ, depth + 1, camera);
+    OctreeRenderBlocks(minX, middleX, minY, middleY, middleZ + 1, maxZ, depth + 1, camera);
+    OctreeRenderBlocks(middleX + 1, maxX, minY, middleY, minZ, middleZ, depth + 1, camera);
+    OctreeRenderBlocks(middleX + 1, maxX, minY, middleY, middleZ + 1, maxZ, depth + 1, camera);
+    OctreeRenderBlocks(minX, middleX, middleY + 1, maxY, minZ, middleZ, depth + 1, camera);
+    OctreeRenderBlocks(minX, middleX, middleY + 1, maxY, middleZ + 1, maxZ, depth + 1, camera);
+    OctreeRenderBlocks(middleX + 1, maxX, middleY + 1, maxY, minZ, middleZ, depth + 1, camera);
+    OctreeRenderBlocks(middleX + 1, maxX, middleY + 1, maxY, middleZ + 1, maxZ, depth + 1, camera);
 }
 
 void WorldBlock::CopyOnReadBackBuffer(GraphicsContext& context)
@@ -387,8 +387,9 @@ void WorldBlock::CopyOnReadBackBuffer(GraphicsContext& context)
     context.GetCommandList()->CopyResource(m_queryReadBackBuffer, m_queryResult);
 }
 
-void WorldBlock::Render(Renderer::MeshSorter& sorter, const Camera& camera, GraphicsContext& context)
+void WorldBlock::Render(const Camera& camera, GraphicsContext& context)
 {
+    BlockResourceManager::clearVisibleBlocks();
     if (Renderer::EnableOcclusion)
     {
         CopyOnReadBackBuffer(context);
@@ -399,7 +400,7 @@ void WorldBlock::Render(Renderer::MeshSorter& sorter, const Camera& camera, Grap
     count = 0;
     if (EnableOctree)
     {
-        OctreeRenderBlocks(0, worldBlockSize - 1, 0, worldBlockSize - 1, 0, worldBlockDepth - 1, 0, sorter, camera);
+        OctreeRenderBlocks(0, worldBlockSize - 1, 0, worldBlockSize - 1, 0, worldBlockDepth - 1, 0, camera);
     }
     else
     {
@@ -411,12 +412,12 @@ void WorldBlock::Render(Renderer::MeshSorter& sorter, const Camera& camera, Grap
                 for (int z = 0; z < worldBlockDepth; z++)
                 {
                     Block& block = blocks[x][y][z];
-
                     if (!block.IsNull()
                         && block.adjacent2OuterAir
-                        && camera.GetWorldSpaceFrustum().IntersectBoundingBox(block.model.GetAxisAlignedBox()))
+                        && camera.GetWorldSpaceFrustum().IntersectBoundingBox(block.axisAlignedBox)
+                        )
                     {
-                        RenderSingleBlock(x, y, z, sorter);
+                        RenderSingleBlock(x, y, z);
                     }
                 }
             }
@@ -433,7 +434,7 @@ void WorldBlock::CleanUp()
         {
             for (auto block : blocksY)
             {
-                block.CleanUp();
+                block.ClearUp();
             }
         }
     }

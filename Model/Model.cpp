@@ -151,6 +151,61 @@ ModelInstance& ModelInstance::operator=( std::shared_ptr<const Model> sourceMode
     return *this;
 }
 
+void ModelInstance::UpdateTranslationSize()
+{
+        if (m_Model == nullptr)
+        return;
+
+    static const size_t kMaxStackDepth = 32;
+
+    size_t stackIdx = 0;
+    Matrix4 matrixStack[kMaxStackDepth];
+    Matrix4 ParentMatrix = Matrix4((AffineTransform)m_Locator);
+
+    ScaleAndTranslation* boundingSphereTransforms = (ScaleAndTranslation*)m_BoundingSphereTransforms.get();
+
+    const GraphNode* sceneGraph = m_AnimGraph ? m_AnimGraph.get() : m_Model->m_SceneGraph.get();
+
+    // Traverse the scene graph in depth first order.  This is the same as linear order
+    // for how the nodes are stored in memory.  Uses a matrix stack instead of recursion.
+    for (const GraphNode* Node = sceneGraph; ; ++Node)
+    {
+        Matrix4 xform = Node->xform;
+        if (!Node->skeletonRoot)
+            xform = ParentMatrix * xform;
+
+        // Concatenate the transform with the parent's matrix and update the matrix list
+        {
+            Scalar scaleXSqr = LengthSquare((Vector3)xform.GetX());
+            Scalar scaleYSqr = LengthSquare((Vector3)xform.GetY());
+            Scalar scaleZSqr = LengthSquare((Vector3)xform.GetZ());
+            Scalar sphereScale = Sqrt(Max(Max(scaleXSqr, scaleYSqr), scaleZSqr));
+            boundingSphereTransforms[Node->matrixIdx] = ScaleAndTranslation((Vector3)xform.GetW(), sphereScale);
+        }
+
+        // If the next node will be a descendent, replace the parent matrix with our new matrix
+        if (Node->hasChildren)
+        {
+            // ...but if we have siblings, make sure to backup our current parent matrix on the stack
+            if (Node->hasSibling)
+            {
+                ASSERT(stackIdx < kMaxStackDepth, "Overflowed the matrix stack");
+                matrixStack[stackIdx++] = ParentMatrix;
+            }
+            ParentMatrix = xform;
+        }
+        else if (!Node->hasSibling)
+        {
+            // There are no more siblings.  If the stack is empty, we are done.  Otherwise, pop
+            // a matrix off the stack and continue.
+            if (stackIdx == 0)
+                break;
+
+            ParentMatrix = matrixStack[--stackIdx];
+        }
+    }
+}
+
 void ModelInstance::Update(GraphicsContext& gfxContext, float deltaTime)
 {
     if (m_Model == nullptr)

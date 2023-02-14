@@ -59,6 +59,9 @@ public:
     virtual void Cleanup(void) override;
 
     virtual void Update(float deltaT) override;
+    void RenderBlocks(MeshSorter& sorter, MeshSorter::DrawPass pass, GraphicsContext& context, GlobalConstants& globals);
+    void RenderShadowBlocks(MeshSorter& sorter, MeshSorter::DrawPass pass, GraphicsContext& context,
+                            GlobalConstants& globals, Matrix4 matrix);
     virtual void RenderScene(void) override;
 
 private:
@@ -197,88 +200,11 @@ void ModelViewer::Startup(void)
     else
     {
         // Load Model
-        world_block = WorldBlock(Vector3(0, 0, 0), 1);
+        world_block = WorldBlock(Vector3(0, 0, 0), 30);
         std::cout << "blockSize" << world_block.blocks.size() << std::endl;
         MotionBlur::Enable = false;
         //Lighting::CreateRandomLights(m_ModelInst.m_Model->m_BoundingBox.GetMin(),m_ModelInst.m_Model->m_BoundingBox.GetMax());
     }
-
-    int n = 5;
-    //initialize upload buffer of instance data
-    float size = World::UnitBlockSize;
-    Renderer::Instances.resize(n * n * n);
-    Block& block = world_block.blocks[0][0][0];
-    const GraphNode* node = world_block.blocks[0][0][0].model.m_Model->m_SceneGraph.get();
-    Matrix4 xform = node->xform;
-    std::cout << "sphere radius: " << block.model.m_Model->m_BoundingSphere.GetRadius() << std::endl;
-    std::cout << "sphere radius block radius: " << World::UnitBlockRadius << std::endl;
-    UniformTransform locator(kIdentity);
-    locator.SetScale(World::UnitBlockRadius* 0.5f);
-    printf("xform2 x: %f, y: %f, z: %f\n", float(xform.GetX().GetX()), float(xform.GetX().GetY()),
-           float(xform.GetX().GetZ()));
-    auto instanceBuffer = Renderer::InstanceBuffer.get();
-    int count =0;
-    for (int x = 0; x < n; x++)
-    {
-        for (int y = 0; y < n; y++)
-        {
-            for (int z = 0; z < n; z++)
-            {
-                int index = x * n * n + y * n + z;
-                // Renderer::Instances[index].WorldMatrix = Matrix4(
-                //     Vector4(size, 0m, 0, 0),
-                //     Vector4(0, size, 0, 0),
-                //     Vector4(0, 0, size, 0),
-                //     Vector4(x * size, y * size, z * size, 1.0f)
-                // );
-                locator.SetTranslation(Vector3(x+0.5f,z+ 0.5f,y+ 0.5f) * World::UnitBlockRadius);
-                Matrix4 newForm = xform;
-                newForm = Matrix4(locator) * xform;
-                printf("xform w: %f, y: %f, z: %f\n", float(newForm.GetW().GetX()), float(newForm.GetW().GetY()),
-                       float(newForm.GetW().GetZ()));
-                printf("xform x: %f, y: %f, z: %f\n", float(newForm.GetX().GetX()), float(newForm.GetX().GetY()),
-                       float(newForm.GetX().GetZ()));
-                Renderer::InstanceData data{};
-
-                XMFLOAT4X4 world = XMFLOAT4X4(
-                    newForm.GetX().GetX(),newForm.GetX().GetY(),newForm.GetX().GetZ(), newForm.GetX().GetW(),
-                    newForm.GetY().GetX(),newForm.GetY().GetY(),newForm.GetY().GetZ(), newForm.GetY().GetW(),
-                    newForm.GetZ().GetX(),newForm.GetZ().GetY(),newForm.GetZ().GetZ(), newForm.GetZ().GetW(),
-                    newForm.GetW().GetX(),newForm.GetW().GetY(),newForm.GetW().GetZ(), newForm.GetW().GetW()
-                );
-                Matrix3 IT = InverseTranspose(newForm.Get3x3());
-                XMFLOAT3X3 worldIT = XMFLOAT3X3(
-                    IT.GetX().GetX(), IT.GetX().GetY(), IT.GetX().GetZ(),
-                    IT.GetY().GetX(), IT.GetY().GetY(), IT.GetY().GetZ(),
-                    IT.GetZ().GetX(), IT.GetZ().GetY(), IT.GetZ().GetZ()
-                );
-
-                XMMATRIX finalWorld = XMLoadFloat4x4(&world);
-                XMMATRIX finalWorldIT = XMLoadFloat3x3(&worldIT);
-
-                XMStoreFloat4x4(&data.WorldMatrix, (finalWorld));
-                XMStoreFloat3x3(&data.WorldIT, (finalWorldIT));
-                
-                // Renderer::Instances[index].WorldMatrix = newForm;
-                // Renderer::Instances[index].WorldIT = InverseTranspose(newForm.Get3x3());
-                // data.WorldMatrix = Matrix4(XMMatrixTranspose(newForm));
-                // data.WorldIT = Matrix3(XMMatrixTranspose(InverseTranspose(newForm.Get3x3())));
-                instanceBuffer->CopyData(count++, data);
-                //*(mMappedData+index) = Renderer::Instances[index];
-            }
-        }
-    }
-    // Matrix4 newForm = (*(mMappedData)).WorldMatrix;
-    //  printf("xformnew w: %f, y: %f, z: %f, w: %f\n", float(newForm.GetW().GetX()),float(newForm.GetW().GetY()),float(newForm.GetW().GetZ()),float(newForm.GetW().GetW()));
-    //  printf("xformnew x: %f, y: %f, z: %f, w: %f\n", float(newForm.GetX().GetX()),float(newForm.GetX().GetY()),float(newForm.GetX().GetZ()),float(newForm.GetX().GetW()));
-    //  printf("xformnew y: %f, y: %f, z: %f, w: %f\n", float(newForm.GetY().GetX()),float(newForm.GetY().GetY()),float(newForm.GetY().GetZ()),float(newForm.GetY().GetW()));
-    //  printf("xformnew z: %f, y: %f, z: %f, w: %f\n", float(newForm.GetZ().GetX()),float(newForm.GetZ().GetY()),float(newForm.GetZ().GetZ()),float(newForm.GetZ().GetW()));
-    //  newForm = (*(mMappedData+1)).WorldMatrix;
-    //  printf("xformnew w: %f, y: %f, z: %f, w: %f\n", float(newForm.GetW().GetX()),float(newForm.GetW().GetY()),float(newForm.GetW().GetZ()),float(newForm.GetW().GetW()));
-    //  printf("xformnew x: %f, y: %f, z: %f, w: %f\n", float(newForm.GetX().GetX()),float(newForm.GetX().GetY()),float(newForm.GetX().GetZ()),float(newForm.GetX().GetW()));
-    //  printf("xformnew y: %f, y: %f, z: %f, w: %f\n", float(newForm.GetY().GetX()),float(newForm.GetY().GetY()),float(newForm.GetY().GetZ()),float(newForm.GetY().GetW()));
-    //  printf("xformnew z: %f, y: %f, z: %f, w: %f\n", float(newForm.GetZ().GetX()),float(newForm.GetZ().GetY()),float(newForm.GetZ().GetZ()),float(newForm.GetZ().GetW()));
-
 
     m_Camera.SetZRange(1.0f, 10000.0f);
     if (gltfFileName.size() == 0)
@@ -318,20 +244,8 @@ void ModelViewer::Update(float deltaT)
     m_CameraController->Update(deltaT);
 
     GraphicsContext& gfxContext = GraphicsContext::Begin(L"Scene Update");
-    //world_block.Update(gfxContext, deltaT);
-
-    //read upload buffer to check
-    // Matrix4 newForm = (*(mMappedData)).WorldMatrix;
-    //  printf("xformnew1 w: %f, y: %f, z: %f, w: %f\n", float(newForm.GetW().GetX()),float(newForm.GetW().GetY()),float(newForm.GetW().GetZ()),float(newForm.GetW().GetW()));
-    //  printf("xformnew1 x: %f, y: %f, z: %f, w: %f\n", float(newForm.GetX().GetX()),float(newForm.GetX().GetY()),float(newForm.GetX().GetZ()),float(newForm.GetX().GetW()));
-    //  printf("xformnew1 y: %f, y: %f, z: %f, w: %f\n", float(newForm.GetY().GetX()),float(newForm.GetY().GetY()),float(newForm.GetY().GetZ()),float(newForm.GetY().GetW()));
-    //  printf("xformnew1 z: %f, y: %f, z: %f, w: %f\n", float(newForm.GetZ().GetX()),float(newForm.GetZ().GetY()),float(newForm.GetZ().GetZ()),float(newForm.GetZ().GetW()));
-    //  newForm = (*(mMappedData+1)).WorldMatrix;
-    //  printf("xformnew2 w: %f, y: %f, z: %f, w: %f\n", float(newForm.GetW().GetX()),float(newForm.GetW().GetY()),float(newForm.GetW().GetZ()),float(newForm.GetW().GetW()));
-    //  printf("xformnew2 x: %f, y: %f, z: %f, w: %f\n", float(newForm.GetX().GetX()),float(newForm.GetX().GetY()),float(newForm.GetX().GetZ()),float(newForm.GetX().GetW()));
-    //  printf("xformnew2 y: %f, y: %f, z: %f, w: %f\n", float(newForm.GetY().GetX()),float(newForm.GetY().GetY()),float(newForm.GetY().GetZ()),float(newForm.GetY().GetW()));
-    //  printf("xformnew2 z: %f, y: %f, z: %f, w: %f\n", float(newForm.GetZ().GetX()),float(newForm.GetZ().GetY()),float(newForm.GetZ().GetZ()),float(newForm.GetZ().GetW()));
-
+    world_block.Update(deltaT);
+    
     gfxContext.Finish();
 
     // We use viewport offsets to jitter sample positions from frame to frame (for TAA.)
@@ -369,6 +283,30 @@ void ModelViewer::Update(float deltaT)
     subScissor.bottom = (LONG)g_SceneColorBuffer.GetHeight();
 }
 
+void ModelViewer::RenderBlocks(MeshSorter &sorter, MeshSorter::DrawPass pass, GraphicsContext& context, GlobalConstants& globals)
+{
+    for (int i =0; i<BlockResourceManager::BlockType::BlocksCount; i++)
+    {
+        auto type = static_cast<BlockResourceManager::BlockType>(i);
+        sorter.ClearMeshes();
+        sorter.currentBlockType = type;
+        BlockResourceManager::getBlockRef(type).Render(sorter);
+        sorter.RenderMeshes(pass, context, globals);
+    }
+}
+
+void ModelViewer::RenderShadowBlocks(MeshSorter &sorter, MeshSorter::DrawPass pass, GraphicsContext& context, GlobalConstants& globals, Matrix4 matrix)
+{
+    for (int i =0; i<BlockResourceManager::BlockType::BlocksCount; i++)
+    {
+        auto type = static_cast<BlockResourceManager::BlockType>(i);
+        sorter.ClearMeshes();
+        sorter.currentBlockType = type;
+        BlockResourceManager::getBlockRef(type).Render(sorter);
+        sorter.Sort();
+        sorter.RenderMeshes(pass, context, globals,matrix);
+    }
+}
 
 void ModelViewer::RenderScene(void)
 {
@@ -409,25 +347,12 @@ void ModelViewer::RenderScene(void)
     sorter.SetScissor(scissor);
     sorter.SetDepthStencilTarget(g_SceneDepthBuffer);
     sorter.AddRenderTarget(g_SceneColorBuffer);
+    
 
-    // {
-    //     ScopedTimer _Prof(L"ReadDepthBufferCost", gfxContext);
-    //     world_block.ReadDepthBuffer(gfxContext);
-    // }
-
-    // m_ModelInst.Render(sorter);
-    {
-        ScopedTimer _BlocksRenderProf(L"BlocksRenderToSorter", gfxContext);
-        world_block.Render(sorter, m_Camera, gfxContext);
-    }
-
-    {
-        ScopedTimer _sortProf(L"Sorter sorts", gfxContext);
-        sorter.Sort();
-    }
+    world_block.Render(m_Camera,gfxContext);
     {
         ScopedTimer _prof(L"Depth Pre-Pass", gfxContext);
-        sorter.RenderMeshes(MeshSorter::kZPass, gfxContext, globals);
+        RenderBlocks(sorter, MeshSorter::kZPass, gfxContext, globals);
     }
 
     SSAO::Render(gfxContext, m_Camera);
@@ -441,13 +366,7 @@ void ModelViewer::RenderScene(void)
             MeshSorter shadowSorter(MeshSorter::kShadows);
             shadowSorter.SetCamera(m_Camera);
             shadowSorter.SetDepthStencilTarget(g_ShadowBuffer);
-
-            // m_ModelInst.Render(shadowSorter);
-            world_block.Render(shadowSorter, m_Camera, gfxContext);
-
-            shadowSorter.Sort();
-
-            shadowSorter.RenderMeshes(MeshSorter::kZPass, gfxContext, globals, m_SunShadow.GetViewProjMatrix());
+            RenderShadowBlocks(shadowSorter, MeshSorter::kZPass, gfxContext, globals,m_SunShadow.GetViewProjMatrix());
         }
 
         gfxContext.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
@@ -459,13 +378,13 @@ void ModelViewer::RenderScene(void)
             gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_READ);
             gfxContext.SetRenderTarget(g_SceneColorBuffer.GetRTV(), g_SceneDepthBuffer.GetDSV_DepthReadOnly());
             gfxContext.SetViewportAndScissor(viewport, scissor);
-
-            sorter.RenderMeshes(MeshSorter::kOpaque, gfxContext, globals);
+            
+            RenderBlocks(sorter, MeshSorter::kOpaque, gfxContext, globals);
         }
 
         Renderer::DrawSkybox(gfxContext, m_Camera, viewport, scissor);
         //
-        sorter.RenderMeshes(MeshSorter::kTransparent, gfxContext, globals);
+        RenderBlocks(sorter, MeshSorter::kTransparent, gfxContext, globals);
     }
     {
         ScopedTimer _prof(L"CheckOcclusionRender", gfxContext);

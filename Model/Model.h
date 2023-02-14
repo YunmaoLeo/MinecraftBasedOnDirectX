@@ -145,6 +145,7 @@ public:
     ModelInstance( const ModelInstance& modelInstance );
 
     ModelInstance& operator=( std::shared_ptr<const Model> sourceModel );
+    void UpdateTranslationSize();
 
     bool IsNull(void) const { return m_Model == nullptr; }
 
