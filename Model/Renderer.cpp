@@ -461,6 +461,7 @@ uint8_t Renderer::GetPSO(uint16_t psoFlags)
 
     if (psoFlags & kAlphaBlend)
     {
+        std::cout << "has AlphaBlend" << std::endl;
         ColorPSO.SetBlendState(BlendPreMultiplied);
         ColorPSO.SetDepthStencilState(DepthStateReadOnly);
     }

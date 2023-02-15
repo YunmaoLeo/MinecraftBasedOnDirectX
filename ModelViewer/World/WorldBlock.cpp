@@ -4,6 +4,7 @@
 #include "Renderer.h"
 #include "ShadowCamera.h"
 #include "World.h"
+#include "Math/PerlinNoise.h"
 #include "Math/Random.h"
 using namespace Math;
 using namespace World;
@@ -12,6 +13,7 @@ NumVar MaxOctreeDepth("Octree/Depth", 2, 0, 10, 1);
 NumVar MaxOctreeNodeLength("Octree/Length", 2, 0, 20, 1);
 BoolVar EnableOctree("Octree/EnableOctree", true);
 BoolVar EnableContainTest("Octree/EnableContainTest", true);
+static std::mutex mtx;
 
 void WorldBlock::InitOcclusionQueriesHeaps()
 {
@@ -83,20 +85,35 @@ void WorldBlock::ReadDepthBuffer(GraphicsContext& context)
 
 void WorldBlock::RandomlyGenerateBlocks()
 {
+    PerlinNoise noise = PerlinNoise(3);
     RandomNumberGenerator generator;
     generator.SetSeed(1);
     for (int x = 0; x < worldBlockSize; x++)
     {
         for (int y = 0; y < worldBlockSize; y++)
         {
-            for (int z = 0; z < worldBlockDepth; z++)
+            //float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001,float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001, 0.8
+            double height = noise.noise((float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001)*0.001,(float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001)*0.001, 0.8);
+            std::cout << "height: "<<height  <<std::endl;
+            int realHeight = this->worldBlockDepth * (height);
+            if (realHeight >= this->worldBlockDepth) realHeight = this->worldBlockDepth-1;
+            if (realHeight <0) realHeight = 0;
+            for (int z = 0; z < realHeight; z++)
             {
-                if (generator.NextFloat() < 0.3)
+                BlockType type;
+                if (z == realHeight-1)
                 {
-                    continue;
+                    type = Dirt;
                 }
-                int type = generator.NextInt(0, 5);
-                Vector3 pointPos = originPoint + Vector3(x + 0.5f, y + 0.5f, z + 0.5f) * UnitBlockSize;
+                else if (float(z)/float(realHeight) < 0.5 + generator.NextInt(-1,1)*0.15)
+                {
+                    type = Stone;
+                }
+                else if (float(z)/float(realHeight) < 1)
+                {
+                    type = Dirt;
+                }
+                Vector3 pointPos = originPoint + Vector3(x + 0.5f, y + 0.5f, z + 0.5f) * UnitBlockSize*1.001;
                 pointPos = Vector3(pointPos.GetX(), pointPos.GetZ(), pointPos.GetY());
                 blocks[x][y][z] = Block(pointPos, BlockResourceManager::BlockType(type), UnitBlockRadius);
             }
@@ -147,7 +164,7 @@ void WorldBlock::SearchBlocksAdjacent2OuterAir()
             blocks[worldBlockSize - 1][y][z].adjacent2OuterAir = true;
         }
     }
-
+    
     for (int x = 0; x < worldBlockSize; x++)
     {
         for (int z = 0; z < worldBlockDepth; z++)
@@ -161,7 +178,7 @@ void WorldBlock::SearchBlocksAdjacent2OuterAir()
     {
         for (int y = 0; y < worldBlockSize; y++)
         {
-            blocks[x][y][0].adjacent2OuterAir = true;
+            // blocks[x][y][0].adjacent2OuterAir = true;
             blocks[x][y][worldBlockDepth - 1].adjacent2OuterAir = true;
         }
     }
@@ -169,11 +186,16 @@ void WorldBlock::SearchBlocksAdjacent2OuterAir()
     {
         for (int y = 0; y < worldBlockSize; y++)
         {
-            for (int z = 0; z < worldBlockDepth; z++)
+            for (int z = worldBlockDepth-1; z >= 0; z--)
             {
                 if (blocks[x][y][z].IsNull() && blocks[x][y][z].adjacent2OuterAir)
                 {
-                    SpreadAdjacent2OuterAir(x, y, z, blocksStatus);
+                    SpreadAdjacent2OuterAir(x + 1, y, z, blocksStatus);
+                    SpreadAdjacent2OuterAir(x - 1, y, z, blocksStatus);
+                    SpreadAdjacent2OuterAir(x, y + 1, z, blocksStatus);
+                    SpreadAdjacent2OuterAir(x, y - 1, z, blocksStatus);
+                    // SpreadAdjacent2OuterAir(x, y, z + 1, blocksStatus);
+                    SpreadAdjacent2OuterAir(x, y, z - 1, blocksStatus);
                 }
             }
         }
@@ -187,7 +209,7 @@ bool WorldBlock::CheckOutOfRange(int x, int y, int z) const
 
 void WorldBlock::RenderSingleBlock(int x, int y, int z)
 {
-    blocksRenderedVector.push_back(Point(x, y, z));
+    // blocksRenderedVector.push_back(Point(x, y, z));
     if (Renderer::EnableOcclusion)
     {
         if (!GetUnitBlockOcclusionResultFromVector(x, y, z)
@@ -387,16 +409,15 @@ void WorldBlock::CopyOnReadBackBuffer(GraphicsContext& context)
     context.GetCommandList()->CopyResource(m_queryReadBackBuffer, m_queryResult);
 }
 
-void WorldBlock::Render(const Camera& camera, GraphicsContext& context)
+bool WorldBlock::Render(const Camera& camera, GraphicsContext& context)
 {
-    BlockResourceManager::clearVisibleBlocks();
     if (Renderer::EnableOcclusion)
     {
         CopyOnReadBackBuffer(context);
         GetAllBlockOcclusionResult();
     }
 
-    blocksRenderedVector.clear();
+    // blocksRenderedVector.clear();
     count = 0;
     if (EnableOctree)
     {
@@ -414,7 +435,7 @@ void WorldBlock::Render(const Camera& camera, GraphicsContext& context)
                     Block& block = blocks[x][y][z];
                     if (!block.IsNull()
                         && block.adjacent2OuterAir
-                        && camera.GetWorldSpaceFrustum().IntersectBoundingBox(block.axisAlignedBox)
+                        //&& camera.GetWorldSpaceFrustum().IntersectBoundingBox(block.axisAlignedBox)
                         )
                     {
                         RenderSingleBlock(x, y, z);
@@ -423,7 +444,8 @@ void WorldBlock::Render(const Camera& camera, GraphicsContext& context)
             }
         }
     }
-    std::cout << "render count: " << count << std::endl;
+    std::cout << "render count: " << count << " blockID: " << this->id<< std::endl;
+    return false;
 }
 
 void WorldBlock::CleanUp()
@@ -448,22 +470,23 @@ void WorldBlock::SpreadAdjacent2OuterAir(int x, int y, int z, std::vector<std::v
         return;
     }
 
-    blocks[x][y][z].adjacent2OuterAir = true;
-
     if (blockStatus[x][y][z])
     {
         return;
     }
+    
+    blocks[x][y][z].adjacent2OuterAir = true;
+    
 
     blockStatus[x][y][z] = 1;
-
-    if (blocks[x][y][z].IsNull() || blocks[x][y][z].isTransparent())
-    {
-        SpreadAdjacent2OuterAir(x + 1, y, z, blockStatus);
-        SpreadAdjacent2OuterAir(x - 1, y, z, blockStatus);
-        SpreadAdjacent2OuterAir(x, y + 1, z, blockStatus);
-        SpreadAdjacent2OuterAir(x, y - 1, z, blockStatus);
-        SpreadAdjacent2OuterAir(x, y, z + 1, blockStatus);
-        SpreadAdjacent2OuterAir(x, y, z - 1, blockStatus);
-    }
+    //
+    // if (blocks[x][y][z].IsNull() || blocks[x][y][z].isTransparent())
+    // {
+    //     SpreadAdjacent2OuterAir(x + 1, y, z, blockStatus);
+    //     SpreadAdjacent2OuterAir(x - 1, y, z, blockStatus);
+    //     SpreadAdjacent2OuterAir(x, y + 1, z, blockStatus);
+    //     SpreadAdjacent2OuterAir(x, y - 1, z, blockStatus);
+    //     // SpreadAdjacent2OuterAir(x, y, z + 1, blockStatus);
+    //     SpreadAdjacent2OuterAir(x, y, z - 1, blockStatus);
+    // }
 }

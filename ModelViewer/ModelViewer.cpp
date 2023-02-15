@@ -35,6 +35,7 @@
 #include "ShadowCamera.h"
 #include "Display.h"
 #include "LightManager.h"
+#include "ThreadPool.h"
 #include "Blocks/BlockResourceManager.h"
 #include "World/World.h"
 #include "World/WorldBlock.h"
@@ -59,7 +60,8 @@ public:
     virtual void Cleanup(void) override;
 
     virtual void Update(float deltaT) override;
-    void RenderBlocks(MeshSorter& sorter, MeshSorter::DrawPass pass, GraphicsContext& context, GlobalConstants& globals);
+    void RenderBlocks(MeshSorter& sorter, MeshSorter::DrawPass pass, GraphicsContext& context,
+                      GlobalConstants& globals);
     void RenderShadowBlocks(MeshSorter& sorter, MeshSorter::DrawPass pass, GraphicsContext& context,
                             GlobalConstants& globals, Matrix4 matrix);
     virtual void RenderScene(void) override;
@@ -76,6 +78,7 @@ private:
 
     ModelInstance m_ModelInst;
     WorldBlock world_block;
+    vector<WorldBlock>* worldBlocks;
     ShadowCamera m_SunShadow;
 };
 
@@ -96,6 +99,8 @@ void ChangeIBLBias(EngineVar::ActionType);
 DynamicEnumVar g_IBLSet("Viewer/Lighting/Environment", ChangeIBLSet);
 std::vector<std::pair<TextureRef, TextureRef>> g_IBLTextures;
 NumVar g_IBLBias("Viewer/Lighting/Gloss Reduction", 2.0f, 0.0f, 10.0f, 1.0f, ChangeIBLBias);
+ThreadPool thread_pool(16);
+vector<std::future<bool>> threadResultVector;
 
 void ChangeIBLSet(EngineVar::ActionType)
 {
@@ -162,6 +167,8 @@ void LoadIBLTextures()
         g_IBLSet.Increment();
 }
 
+int WorldBlock::blockId = 0;
+
 void ModelViewer::Startup(void)
 {
     // 初始化动态模糊
@@ -199,9 +206,23 @@ void ModelViewer::Startup(void)
     }
     else
     {
+        int count = 4;
+        worldBlocks = new vector<WorldBlock>();
         // Load Model
-        world_block = WorldBlock(Vector3(0, 0, 0), 30);
-        std::cout << "blockSize" << world_block.blocks.size() << std::endl;
+        int blockSize = 16;
+
+
+        for (int x = 0; x < count; x++)
+        {
+            for (int y = 0; y < count; y++)
+            {
+                Vector3 originPoint = Vector3(x * blockSize * World::UnitBlockSize,
+                                              y * blockSize * World::UnitBlockSize, 0);
+                worldBlocks->emplace_back(std::move(WorldBlock(originPoint, blockSize)));
+            }
+        }
+        std::cout << "worldBlockCount: " << worldBlocks->size() << std::endl;
+        // world_block = WorldBlock(Vector3(0, 0, 0), 16);
         MotionBlur::Enable = false;
         //Lighting::CreateRandomLights(m_ModelInst.m_Model->m_BoundingBox.GetMin(),m_ModelInst.m_Model->m_BoundingBox.GetMax());
     }
@@ -219,7 +240,11 @@ void ModelViewer::Startup(void)
 void ModelViewer::Cleanup(void)
 {
     m_ModelInst = nullptr;
-    world_block.CleanUp();
+    for (int x = 0; x < worldBlocks->size(); x++)
+    {
+        worldBlocks->at(x).CleanUp();
+    }
+    // world_block.CleanUp();
 
     g_IBLTextures.clear();
 
@@ -244,8 +269,11 @@ void ModelViewer::Update(float deltaT)
     m_CameraController->Update(deltaT);
 
     GraphicsContext& gfxContext = GraphicsContext::Begin(L"Scene Update");
-    world_block.Update(deltaT);
-    
+    for (int x = 0; x < worldBlocks->size(); x++)
+    {
+        worldBlocks->at(x).Update(deltaT);
+    }
+
     gfxContext.Finish();
 
     // We use viewport offsets to jitter sample positions from frame to frame (for TAA.)
@@ -283,9 +311,10 @@ void ModelViewer::Update(float deltaT)
     subScissor.bottom = (LONG)g_SceneColorBuffer.GetHeight();
 }
 
-void ModelViewer::RenderBlocks(MeshSorter &sorter, MeshSorter::DrawPass pass, GraphicsContext& context, GlobalConstants& globals)
+void ModelViewer::RenderBlocks(MeshSorter& sorter, MeshSorter::DrawPass pass, GraphicsContext& context,
+                               GlobalConstants& globals)
 {
-    for (int i =0; i<BlockResourceManager::BlockType::BlocksCount; i++)
+    for (int i = 0; i < BlockResourceManager::BlockType::BlocksCount; i++)
     {
         auto type = static_cast<BlockResourceManager::BlockType>(i);
         sorter.ClearMeshes();
@@ -295,21 +324,23 @@ void ModelViewer::RenderBlocks(MeshSorter &sorter, MeshSorter::DrawPass pass, Gr
     }
 }
 
-void ModelViewer::RenderShadowBlocks(MeshSorter &sorter, MeshSorter::DrawPass pass, GraphicsContext& context, GlobalConstants& globals, Matrix4 matrix)
+void ModelViewer::RenderShadowBlocks(MeshSorter& sorter, MeshSorter::DrawPass pass, GraphicsContext& context,
+                                     GlobalConstants& globals, Matrix4 matrix)
 {
-    for (int i =0; i<BlockResourceManager::BlockType::BlocksCount; i++)
+    for (int i = 0; i < BlockResourceManager::BlockType::BlocksCount; i++)
     {
         auto type = static_cast<BlockResourceManager::BlockType>(i);
         sorter.ClearMeshes();
         sorter.currentBlockType = type;
         BlockResourceManager::getBlockRef(type).Render(sorter);
         sorter.Sort();
-        sorter.RenderMeshes(pass, context, globals,matrix);
+        sorter.RenderMeshes(pass, context, globals, matrix);
     }
 }
 
 void ModelViewer::RenderScene(void)
 {
+    threadResultVector.clear();
     std::cout << "start a render" << std::endl;
     GraphicsContext& gfxContext = GraphicsContext::Begin(L"Scene Render");
     uint32_t FrameIndex = TemporalEffects::GetFrameIndexMod2();
@@ -348,8 +379,23 @@ void ModelViewer::RenderScene(void)
     sorter.SetDepthStencilTarget(g_SceneDepthBuffer);
     sorter.AddRenderTarget(g_SceneColorBuffer);
     
+    BlockResourceManager::clearVisibleBlocks();
 
-    world_block.Render(m_Camera,gfxContext);
+    for (auto& block : *worldBlocks)
+    {
+        threadResultVector.emplace_back(thread_pool.enqueue([&]
+        {
+            bool result = block.Render(m_Camera, gfxContext);
+            return result;
+        }));
+    }
+
+    for (auto&& result : threadResultVector)
+    {
+        result.wait();
+        std::cout << "result ok" << std::endl;
+    }
+
     {
         ScopedTimer _prof(L"Depth Pre-Pass", gfxContext);
         RenderBlocks(sorter, MeshSorter::kZPass, gfxContext, globals);
@@ -366,7 +412,7 @@ void ModelViewer::RenderScene(void)
             MeshSorter shadowSorter(MeshSorter::kShadows);
             shadowSorter.SetCamera(m_Camera);
             shadowSorter.SetDepthStencilTarget(g_ShadowBuffer);
-            RenderShadowBlocks(shadowSorter, MeshSorter::kZPass, gfxContext, globals,m_SunShadow.GetViewProjMatrix());
+            RenderShadowBlocks(shadowSorter, MeshSorter::kZPass, gfxContext, globals, m_SunShadow.GetViewProjMatrix());
         }
 
         gfxContext.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
@@ -378,7 +424,7 @@ void ModelViewer::RenderScene(void)
             gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_READ);
             gfxContext.SetRenderTarget(g_SceneColorBuffer.GetRTV(), g_SceneDepthBuffer.GetDSV_DepthReadOnly());
             gfxContext.SetViewportAndScissor(viewport, scissor);
-            
+
             RenderBlocks(sorter, MeshSorter::kOpaque, gfxContext, globals);
         }
 

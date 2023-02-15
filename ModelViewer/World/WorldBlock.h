@@ -21,7 +21,12 @@ public:
               std::vector<std::vector<Block>>(worldBlockSize,
                                               std::vector<Block>(worldBlockDepth)));
         InitBlocks();
+        id = blockId;
+        blockId++;
     }
+
+    static int blockId;
+    int id;
 
     struct Point
     {
@@ -56,13 +61,13 @@ public:
     void OctreeRenderBlocks(int minX, int maxX, int minY, int maxY, int minZ, int maxZ, int depth,
                             const Math::Camera& camera);
     void CopyOnReadBackBuffer(GraphicsContext& context);
-    void Render(const Math::Camera& camera, GraphicsContext& context);
+    bool Render(const Math::Camera& camera, GraphicsContext& context);
     void CleanUp();
 
 
     Math::Vector3 originPoint;
     uint16_t worldBlockSize = 256;
-    uint16_t worldBlockDepth = 4;
+    uint16_t worldBlockDepth = 50;
     std::vector<std::vector<std::vector<Block>>> blocks{};
     std::vector<std::vector<std::vector<bool>>> blocksOcclusionState{};
     std::vector<Point> blocksRenderedVector{};

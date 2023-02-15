@@ -37,12 +37,6 @@ namespace BlockResourceManager
         Diamond,
         RedStoneLamp,
         Torch,
-        
-
-
-
-
-
         TBall,
         BlocksCount,
     };
@@ -70,7 +64,7 @@ namespace BlockResourceManager
     class InstancesManager
     {
     public:
-        uint32_t MAX_BLOCK_NUMBER = 4096;
+        uint32_t MAX_BLOCK_NUMBER = 40960;
         std::vector<InstanceData> InstanceVector{};
         std::unique_ptr<UtilUploadBuffer<InstanceData>> InstanceBuffer = nullptr;
         uint32_t visibleBlockNumber = 0;

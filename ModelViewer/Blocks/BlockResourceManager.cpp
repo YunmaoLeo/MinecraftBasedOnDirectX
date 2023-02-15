@@ -36,9 +36,12 @@ void BlockResourceManager::clearVisibleBlocks()
     }
 }
 
+std::mutex mtx;
+
 void BlockResourceManager::addBlockIntoManager(BlockType blockType, Math::Vector3 position, float radius)
 {
     InstancesManager& manager = BlocksInstancesManagerMap[blockType];
+    
     InstanceData data;
     
     Math::Matrix4 worldMatrix(Math::kIdentity);
@@ -51,8 +54,17 @@ void BlockResourceManager::addBlockIntoManager(BlockType blockType, Math::Vector
     Math::Matrix3 worldIT = Math::InverseTranspose(worldMatrix.Get3x3());
     XMStoreFloat3x3(&data.WorldIT, XMMATRIX(worldIT));
     
+    mtx.lock();
+    if (manager.MAX_BLOCK_NUMBER <= manager.visibleBlockNumber+1)
+    {
+        std::cout << "achieve max number" << std::endl;
+        return;
+    }
+
+
     manager.InstanceBuffer.get()->CopyData(manager.visibleBlockNumber, data);
     manager.visibleBlockNumber++;
+    mtx.unlock();
 }
 
 void BlockResourceManager::initBlocks()

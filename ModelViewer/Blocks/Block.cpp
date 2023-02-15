@@ -7,7 +7,7 @@ Block::Block(Math::Vector3& position, BlockResourceManager::BlockType type, floa
     radius = sqrt(std::pow(sideSize, 2)+std::pow(sideSize,2) + std::pow(sideSize,2)) /2;
     boundingSphere = Math::BoundingSphere(position, radius);
     // Math::AxisAlignedBox box = BlockResourceManager::getBlockRef(type).m_Model->m_BoundingBox;
-    axisAlignedBox = Math::AxisAlignedBox(position+ Math::Vector3(-sideSize,-sideSize,-sideSize), position+Math::Vector3(sideSize, sideSize,sideSize));
+    axisAlignedBox = Math::AxisAlignedBox(position+ Math::Vector3(-sideSize/2,-sideSize/2,-sideSize/2), position+Math::Vector3(sideSize/2, sideSize/2,sideSize/2));
 }
 
 Block& Block::operator=(const Block& block)
