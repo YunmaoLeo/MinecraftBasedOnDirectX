@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 
+#include "OctreeNode.h"
 #include "ShadowCamera.h"
 #include "../Blocks/Block.h"
 #include "Math/Vector.h"
@@ -58,6 +59,8 @@ public:
     void RenderBlocksInRange(int minX, int maxX, int minY, int maxY, int minZ, int maxZ,
                              const Math::Camera& camera);
     void RenderBlocksInRangeNoIntersectCheck(int minX, int maxX, int minY, int maxY, int minZ, int maxZ);
+    void CreateOctreeNode(OctreeNode* &node, int minX,int maxX, int minY, int maxY, int minZ, int maxZ, int depth);
+    void OctreeRenderBlocks(OctreeNode*& node, const Math::Camera& camera);
     void OctreeRenderBlocks(int minX, int maxX, int minY, int maxY, int minZ, int maxZ, int depth,
                             const Math::Camera& camera);
     void CopyOnReadBackBuffer(GraphicsContext& context);
@@ -66,6 +69,7 @@ public:
 
 
     Math::Vector3 originPoint;
+    OctreeNode* octreeNode;
     uint16_t worldBlockSize = 256;
     uint16_t worldBlockDepth = 50;
     std::vector<std::vector<std::vector<Block>>> blocks{};

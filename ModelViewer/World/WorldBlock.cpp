@@ -1,8 +1,11 @@
 ﻿#include "WorldBlock.h"
 
+#include <stdbool.h>
+
 #include "BufferManager.h"
 #include "Renderer.h"
 #include "ShadowCamera.h"
+#include "SimplexNoise.h"
 #include "World.h"
 #include "Math/PerlinNoise.h"
 #include "Math/Random.h"
@@ -13,7 +16,7 @@ NumVar MaxOctreeDepth("Octree/Depth", 2, 0, 10, 1);
 NumVar MaxOctreeNodeLength("Octree/Length", 2, 0, 20, 1);
 BoolVar EnableOctree("Octree/EnableOctree", true);
 BoolVar EnableContainTest("Octree/EnableContainTest", true);
-static std::mutex mtx;
+BoolVar EnableOctreeCompute("Octree/ComputeOptimize", true);
 
 void WorldBlock::InitOcclusionQueriesHeaps()
 {
@@ -85,7 +88,8 @@ void WorldBlock::ReadDepthBuffer(GraphicsContext& context)
 
 void WorldBlock::RandomlyGenerateBlocks()
 {
-    PerlinNoise noise = PerlinNoise(3);
+    //PerlinNoise noise = PerlinNoise(9);
+    SimplexNoise noise(0.8,1,0.5,0.7);
     RandomNumberGenerator generator;
     generator.SetSeed(1);
     for (int x = 0; x < worldBlockSize; x++)
@@ -93,9 +97,10 @@ void WorldBlock::RandomlyGenerateBlocks()
         for (int y = 0; y < worldBlockSize; y++)
         {
             //float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001,float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001, 0.8
-            double height = noise.noise((float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001)*0.001,(float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001)*0.001, 0.8);
+            //double height = noise.noise((float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001)*0.001,(float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001)*0.001, 0.8);
+            double height = noise.noise((float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001)*0.0005,(float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001)*0.0005);
             std::cout << "height: "<<height  <<std::endl;
-            int realHeight = this->worldBlockDepth * (height);
+            int realHeight = this->worldBlockDepth * (height+1)/2;
             if (realHeight >= this->worldBlockDepth) realHeight = this->worldBlockDepth-1;
             if (realHeight <0) realHeight = 0;
             for (int z = 0; z < realHeight; z++)
@@ -126,6 +131,7 @@ void WorldBlock::InitBlocks()
     RandomlyGenerateBlocks();
     SearchBlocksAdjacent2OuterAir();
     InitOcclusionQueriesHeaps();
+    CreateOctreeNode(this->octreeNode, 0, this->worldBlockSize-1, 0, this->worldBlockSize-1, 0, this->worldBlockDepth-1, 0);
 }
 
 void WorldBlock::Update(float deltaTime)
@@ -316,7 +322,8 @@ void WorldBlock::RenderBlocksInRange(int minX, int maxX, int minY, int maxY, int
 
                 if (!block.IsNull()
                     && block.adjacent2OuterAir
-                    && camera.GetWorldSpaceFrustum().IntersectSphere(block.boundingSphere))
+                    && camera.GetWorldSpaceFrustum().IntersectSphere(block.boundingSphere)
+                    )
                 {
                     RenderSingleBlock(x, y, z);
                 }
@@ -345,11 +352,98 @@ void WorldBlock::RenderBlocksInRangeNoIntersectCheck(int minX, int maxX, int min
     }
 }
 
+void WorldBlock::CreateOctreeNode(OctreeNode* &node, int minX,int maxX, int minY, int maxY, int minZ, int maxZ, int depth)
+{
+    int maxDepth = 3;
+    bool isLeafNode = depth == maxDepth ? true : false;
+    node = new OctreeNode(minX, maxX, minY, maxY, minZ, maxZ, isLeafNode);
+
+    AxisAlignedBox box;
+
+    for (int x=minX; x<=maxX;x+=(maxX-minX))
+    {
+        for (int y = minY; y<=maxY; y+=(maxY-minY))
+        {
+            for (int z = minZ; z<=maxZ; z+=(maxZ-minZ))
+            {
+                Vector3 worldPoint = {originPoint.GetX(), originPoint.GetZ(), originPoint.GetY()};
+                Vector3 minPoint = worldPoint + (Vector3(x,z,y) * UnitBlockSize);
+                Vector3 maxPoint = worldPoint + (Vector3(x+1,z+1,y+1) * UnitBlockSize);
+                box = std::move(box.Union({minPoint, maxPoint}));
+            }
+        }
+    }
+    node->box = std::move(box);
+
+    if (depth==maxDepth)
+    {
+        return;
+    }
+
+    // separate to eight sub space.
+    int middleX = (maxX - minX) / 2 + minX;
+    int middleY = (maxY - minY) / 2 + minY;
+    int middleZ = (maxZ - minZ) / 2 + minZ;
+
+    CreateOctreeNode(node->leftBottomBack,minX, middleX, minY, middleY, minZ, middleZ, depth + 1);
+    CreateOctreeNode(node->leftTopBack,minX, middleX, minY, middleY, middleZ + 1, maxZ, depth + 1);
+    CreateOctreeNode(node->rightBottomBack,middleX + 1, maxX, minY, middleY, minZ, middleZ, depth + 1);
+    CreateOctreeNode(node->rightTopBack,middleX + 1, maxX, minY, middleY, middleZ + 1, maxZ, depth + 1);
+    CreateOctreeNode(node->leftBottomFront,minX, middleX, middleY + 1, maxY, minZ, middleZ, depth + 1);
+    CreateOctreeNode(node->leftTopFront,minX, middleX, middleY + 1, maxY, middleZ + 1, maxZ, depth + 1);
+    CreateOctreeNode(node->rightBottomFront,middleX + 1, maxX, middleY + 1, maxY, minZ, middleZ, depth + 1);
+    CreateOctreeNode(node->rightTopFront,middleX + 1, maxX, middleY + 1, maxY, middleZ + 1, maxZ, depth + 1);
+    
+}
+
+void WorldBlock::OctreeRenderBlocks(OctreeNode* &node, const Camera& camera)
+{
+    AxisAlignedBox box = node->box;
+
+    if (!camera.GetWorldSpaceFrustum().IntersectBoundingBox(box))
+    {
+        return;
+    }
+
+    int minX = node->minX;
+    int maxX = node->maxX;
+    int minY = node->minY;
+    int maxY = node->maxY;
+    int minZ = node->minZ;
+    int maxZ = node->maxZ;
+
+    if (EnableContainTest && camera.GetWorldSpaceFrustum().ContainingBoundingBox(box))
+    {
+        std::cout << "pass contain test" << std::endl;
+        RenderBlocksInRangeNoIntersectCheck(minX, maxX, minY, maxY, minZ, maxZ);
+        return;
+    }
+    // if depth > n, then invoke render in range
+    // if any node side reaches 1, invoke render in range
+    if (node->isLeafNode|| maxX - minX <= MaxOctreeNodeLength || maxY - minY <= MaxOctreeNodeLength || maxZ -
+        minZ <= MaxOctreeNodeLength)
+    {
+        RenderBlocksInRange(minX, maxX, minY, maxY, minZ, maxZ, camera);
+        return;
+    }
+
+    // separate to eight sub space.
+    OctreeRenderBlocks(node->leftBottomBack, camera);
+    OctreeRenderBlocks(node->leftBottomFront, camera);
+    OctreeRenderBlocks(node->leftTopBack, camera);
+    OctreeRenderBlocks(node->leftTopFront, camera);
+    OctreeRenderBlocks(node->rightBottomBack, camera);
+    OctreeRenderBlocks(node->rightBottomFront, camera);
+    OctreeRenderBlocks(node->rightTopBack, camera);
+    OctreeRenderBlocks(node->rightTopFront, camera);
+}
 
 void WorldBlock::OctreeRenderBlocks(int minX, int maxX, int minY, int maxY, int minZ, int maxZ, int depth,
                                     const Camera& camera)
 {
     //check bounding box intersection
+    AxisAlignedBox box;
+    
     Block& block1 = blocks[minX][minY][minZ];
     Block& block2 = blocks[minX][maxY][minZ];
     Block& block3 = blocks[minX][minY][maxZ];
@@ -359,7 +453,7 @@ void WorldBlock::OctreeRenderBlocks(int minX, int maxX, int minY, int maxY, int 
     Block& block7 = blocks[maxX][minY][maxZ];
     Block& block8 = blocks[maxX][maxY][maxZ];
 
-    AxisAlignedBox box;
+
     box.AddBoundingBox(block1.axisAlignedBox);
     box.AddBoundingBox(block2.axisAlignedBox);
     box.AddBoundingBox(block3.axisAlignedBox);
@@ -368,7 +462,7 @@ void WorldBlock::OctreeRenderBlocks(int minX, int maxX, int minY, int maxY, int 
     box.AddBoundingBox(block6.axisAlignedBox);
     box.AddBoundingBox(block7.axisAlignedBox);
     box.AddBoundingBox(block8.axisAlignedBox);
-
+    
     if (!camera.GetWorldSpaceFrustum().IntersectBoundingBox(box))
     {
         return;
@@ -421,7 +515,14 @@ bool WorldBlock::Render(const Camera& camera, GraphicsContext& context)
     count = 0;
     if (EnableOctree)
     {
-        OctreeRenderBlocks(0, worldBlockSize - 1, 0, worldBlockSize - 1, 0, worldBlockDepth - 1, 0, camera);
+        if (EnableOctreeCompute)
+        {
+            OctreeRenderBlocks(this->octreeNode, camera);
+        }
+        else
+        {
+            OctreeRenderBlocks(0, worldBlockSize - 1, 0, worldBlockSize - 1, 0, worldBlockDepth - 1, 0, camera);
+        }
     }
     else
     {

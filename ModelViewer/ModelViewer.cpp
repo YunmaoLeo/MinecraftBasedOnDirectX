@@ -99,7 +99,7 @@ void ChangeIBLBias(EngineVar::ActionType);
 DynamicEnumVar g_IBLSet("Viewer/Lighting/Environment", ChangeIBLSet);
 std::vector<std::pair<TextureRef, TextureRef>> g_IBLTextures;
 NumVar g_IBLBias("Viewer/Lighting/Gloss Reduction", 2.0f, 0.0f, 10.0f, 1.0f, ChangeIBLBias);
-ThreadPool thread_pool(16);
+ThreadPool thread_pool(25);
 vector<std::future<bool>> threadResultVector;
 
 void ChangeIBLSet(EngineVar::ActionType)
@@ -206,7 +206,7 @@ void ModelViewer::Startup(void)
     }
     else
     {
-        int count = 4;
+        int count = 5;
         worldBlocks = new vector<WorldBlock>();
         // Load Model
         int blockSize = 16;
@@ -428,7 +428,7 @@ void ModelViewer::RenderScene(void)
             RenderBlocks(sorter, MeshSorter::kOpaque, gfxContext, globals);
         }
 
-        Renderer::DrawSkybox(gfxContext, m_Camera, viewport, scissor);
+        //Renderer::DrawSkybox(gfxContext, m_Camera, viewport, scissor);
         //
         RenderBlocks(sorter, MeshSorter::kTransparent, gfxContext, globals);
     }
