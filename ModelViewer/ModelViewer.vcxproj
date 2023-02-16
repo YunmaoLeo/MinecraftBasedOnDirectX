@@ -59,6 +59,7 @@
     <ClCompile Include="Blocks\Block.cpp" />
     <ClCompile Include="Blocks\BlockResourceManager.cpp" />
     <ClCompile Include="ModelViewer.cpp" />
+    <ClCompile Include="World\WorldMap.cpp" />
     <ClCompile Include="World\World.cpp" />
     <ClCompile Include="World\WorldBlock.cpp" />
   </ItemGroup>
@@ -127,6 +128,7 @@
   <ItemGroup>
     <ClInclude Include="Blocks\Block.h" />
     <ClInclude Include="Blocks\BlockResourceManager.h" />
+    <ClInclude Include="World\WorldMap.h" />
     <ClInclude Include="World\World.h" />
     <ClInclude Include="World\WorldBlock.h" />
   </ItemGroup>

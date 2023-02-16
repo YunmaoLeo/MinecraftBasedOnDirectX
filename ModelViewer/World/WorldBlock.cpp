@@ -16,7 +16,7 @@ NumVar MaxOctreeDepth("Octree/Depth", 2, 0, 10, 1);
 NumVar MaxOctreeNodeLength("Octree/Length", 2, 0, 20, 1);
 BoolVar EnableOctree("Octree/EnableOctree", true);
 BoolVar EnableContainTest("Octree/EnableContainTest", true);
-BoolVar EnableOctreeCompute("Octree/ComputeOptimize", true);
+BoolVar EnableOctreeCompute("Octree/ComputeOptimize", false);
 
 void WorldBlock::InitOcclusionQueriesHeaps()
 {
@@ -162,23 +162,23 @@ void WorldBlock::SearchBlocksAdjacent2OuterAir()
     // Assign outermost blocks as adjacent to outer air.
     // Outermost blocks has a same attribute, one of x,y equals 0 or worldBlockSize-1
     //                                  or z equals 0 or worldBlockDepth-1;
-    for (int y = 0; y < worldBlockSize; y++)
-    {
-        for (int z = 0; z < worldBlockDepth; z++)
-        {
-            blocks[0][y][z].adjacent2OuterAir = true;
-            blocks[worldBlockSize - 1][y][z].adjacent2OuterAir = true;
-        }
-    }
-    
-    for (int x = 0; x < worldBlockSize; x++)
-    {
-        for (int z = 0; z < worldBlockDepth; z++)
-        {
-            blocks[x][0][z].adjacent2OuterAir = true;
-            blocks[x][worldBlockSize - 1][z].adjacent2OuterAir = true;
-        }
-    }
+    // for (int y = 0; y < worldBlockSize; y++)
+    // {
+    //     for (int z = 0; z < worldBlockDepth; z++)
+    //     {
+    //         blocks[0][y][z].adjacent2OuterAir = true;
+    //         blocks[worldBlockSize - 1][y][z].adjacent2OuterAir = true;
+    //     }
+    // }
+    //
+    // for (int x = 0; x < worldBlockSize; x++)
+    // {
+    //     for (int z = 0; z < worldBlockDepth; z++)
+    //     {
+    //         blocks[x][0][z].adjacent2OuterAir = true;
+    //         blocks[x][worldBlockSize - 1][z].adjacent2OuterAir = true;
+    //     }
+    // }
 
     for (int x = 0; x < worldBlockSize; x++)
     {
@@ -354,6 +354,10 @@ void WorldBlock::RenderBlocksInRangeNoIntersectCheck(int minX, int maxX, int min
 
 void WorldBlock::CreateOctreeNode(OctreeNode* &node, int minX,int maxX, int minY, int maxY, int minZ, int maxZ, int depth)
 {
+    if (minX >= maxX || minY >= maxY || minZ >= maxZ)
+    {
+        return;
+    }
     int maxDepth = 3;
     bool isLeafNode = depth == maxDepth ? true : false;
     node = new OctreeNode(minX, maxX, minY, maxY, minZ, maxZ, isLeafNode);

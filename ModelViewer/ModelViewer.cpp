@@ -37,6 +37,7 @@
 #include "LightManager.h"
 #include "ThreadPool.h"
 #include "Blocks/BlockResourceManager.h"
+#include "World/WorldMap.h"
 #include "World/World.h"
 #include "World/WorldBlock.h"
 
@@ -78,7 +79,8 @@ private:
 
     ModelInstance m_ModelInst;
     WorldBlock world_block;
-    vector<WorldBlock>* worldBlocks;
+    vector<WorldBlock*> worldBlocks;
+    WorldMap* worldMap;
     ShadowCamera m_SunShadow;
 };
 
@@ -206,22 +208,9 @@ void ModelViewer::Startup(void)
     }
     else
     {
-        int count = 5;
-        worldBlocks = new vector<WorldBlock>();
-        // Load Model
-        int blockSize = 16;
-
-
-        for (int x = 0; x < count; x++)
-        {
-            for (int y = 0; y < count; y++)
-            {
-                Vector3 originPoint = Vector3(x * blockSize * World::UnitBlockSize,
-                                              y * blockSize * World::UnitBlockSize, 0);
-                worldBlocks->emplace_back(std::move(WorldBlock(originPoint, blockSize)));
-            }
-        }
-        std::cout << "worldBlockCount: " << worldBlocks->size() << std::endl;
+        worldMap = new WorldMap(5,16,0);
+        worldBlocks = worldMap->getBlocksNeedRender(m_Camera.GetPosition());
+        
         // world_block = WorldBlock(Vector3(0, 0, 0), 16);
         MotionBlur::Enable = false;
         //Lighting::CreateRandomLights(m_ModelInst.m_Model->m_BoundingBox.GetMin(),m_ModelInst.m_Model->m_BoundingBox.GetMax());
@@ -240,10 +229,6 @@ void ModelViewer::Startup(void)
 void ModelViewer::Cleanup(void)
 {
     m_ModelInst = nullptr;
-    for (int x = 0; x < worldBlocks->size(); x++)
-    {
-        worldBlocks->at(x).CleanUp();
-    }
     // world_block.CleanUp();
 
     g_IBLTextures.clear();
@@ -269,9 +254,9 @@ void ModelViewer::Update(float deltaT)
     m_CameraController->Update(deltaT);
 
     GraphicsContext& gfxContext = GraphicsContext::Begin(L"Scene Update");
-    for (int x = 0; x < worldBlocks->size(); x++)
+    for (int x = 0; x < worldBlocks.size(); x++)
     {
-        worldBlocks->at(x).Update(deltaT);
+        worldBlocks[x]->Update(deltaT);
     }
 
     gfxContext.Finish();
@@ -341,6 +326,8 @@ void ModelViewer::RenderShadowBlocks(MeshSorter& sorter, MeshSorter::DrawPass pa
 void ModelViewer::RenderScene(void)
 {
     threadResultVector.clear();
+    std::cout << "cameraPosition x: "<<m_Camera.GetPosition().GetX()<<" y: "<<m_Camera.GetPosition().GetY()<<" z: "<<m_Camera.GetPosition().GetZ()<<std::endl;
+    worldBlocks = worldMap->getBlocksNeedRender(m_Camera.GetPosition());
     std::cout << "start a render" << std::endl;
     GraphicsContext& gfxContext = GraphicsContext::Begin(L"Scene Render");
     uint32_t FrameIndex = TemporalEffects::GetFrameIndexMod2();
@@ -381,11 +368,11 @@ void ModelViewer::RenderScene(void)
     
     BlockResourceManager::clearVisibleBlocks();
 
-    for (auto& block : *worldBlocks)
+    for (auto& block : worldBlocks)
     {
         threadResultVector.emplace_back(thread_pool.enqueue([&]
         {
-            bool result = block.Render(m_Camera, gfxContext);
+            bool result = block->Render(m_Camera, gfxContext);
             return result;
         }));
     }

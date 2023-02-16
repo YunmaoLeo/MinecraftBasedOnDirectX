@@ -70,8 +70,8 @@ public:
 
     Math::Vector3 originPoint;
     OctreeNode* octreeNode;
-    uint16_t worldBlockSize = 256;
-    uint16_t worldBlockDepth = 50;
+    uint16_t worldBlockSize = 16;
+    uint16_t worldBlockDepth = 64;
     std::vector<std::vector<std::vector<Block>>> blocks{};
     std::vector<std::vector<std::vector<bool>>> blocksOcclusionState{};
     std::vector<Point> blocksRenderedVector{};

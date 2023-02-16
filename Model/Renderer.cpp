@@ -61,7 +61,7 @@ namespace Renderer
 {
     BoolVar SeparateZPass("Renderer/Separate Z Pass", true);
     BoolVar EnableOcclusion("Model/EnableOcclusion", false);
-    NumVar ModelCount("Model/ModelCount", 1,1,125,1);
+    NumVar ModelCount("Model/ModelCount", 1, 1, 125, 1);
     bool s_Initialized = false;
 
     DescriptorHeap s_TextureHeap;
@@ -95,7 +95,7 @@ void Renderer::Initialize(void)
 {
     if (s_Initialized)
         return;
-    
+
     SamplerDesc DefaultSamplerDesc;
     DefaultSamplerDesc.MaxAnisotropy = 8;
 
@@ -116,7 +116,7 @@ void Renderer::Initialize(void)
         InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 10, 10, D3D12_SHADER_VISIBILITY_PIXEL);
     m_RootSig[kCommonCBV].InitAsConstantBuffer(1);
     m_RootSig[kSkinMatrices].InitAsBufferSRV(20, D3D12_SHADER_VISIBILITY_VERTEX);
-    m_RootSig[kInstanceData].InitAsBufferSRV(0, D3D12_SHADER_VISIBILITY_VERTEX,2);
+    m_RootSig[kInstanceData].InitAsBufferSRV(0, D3D12_SHADER_VISIBILITY_VERTEX, 2);
     m_RootSig.Finalize(L"RootSig", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
     DXGI_FORMAT ColorFormat = g_SceneColorBuffer.GetFormat();
@@ -705,19 +705,25 @@ void MeshSorter::RenderMeshes(
     GlobalConstants& globals)
 {
     ASSERT(m_DSV != nullptr);
-
+    BlockResourceManager::InstancesManager& manager = BlockResourceManager::getManager(currentBlockType);
+    if (manager.visibleBlockNumber == 0)
+    {
+        return;
+    }
     Renderer::UpdateGlobalDescriptors();
 
-    
+
     context.SetRootSignature(m_RootSig);
     context.SetPrimitiveTopology(SetTopologyTypeToLine
                                      ? D3D_PRIMITIVE_TOPOLOGY_LINELIST
                                      : D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    BlockResourceManager::InstancesManager& manager = BlockResourceManager::getManager(currentBlockType);
-    context.GetCommandList()->SetGraphicsRootShaderResourceView(kInstanceData, manager.InstanceBuffer->Resource()->GetGPUVirtualAddress());
+
+    context.GetCommandList()->SetGraphicsRootShaderResourceView(kInstanceData,
+                                                                manager.InstanceBuffer->Resource()->
+                                                                        GetGPUVirtualAddress());
     context.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, s_TextureHeap.GetHeapPointer());
     context.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, s_SamplerHeap.GetHeapPointer());
-    
+
     // Set common textures
     context.SetDescriptorTable(kCommonSRVs, m_CommonTextures);
 
@@ -858,8 +864,8 @@ void MeshSorter::RenderMeshes(
             //     std::cout << "checkMesh: numDraws: " << mesh.numDraws<<std::endl;
             //     std::cout << "checkMesh: ibOffset " << mesh.ibOffset<<std::endl;
             // }
-            
-            context.DrawIndexedInstanced(mesh.draw[0].primCount, manager.visibleBlockNumber,0,0,0);
+
+            context.DrawIndexedInstanced(mesh.draw[0].primCount, manager.visibleBlockNumber, 0, 0, 0);
             // context.DrawIndexedInstanced(36, ModelCount,0,0,1);
             // context.DrawIndexedInstanced(36, 1,0,0,3);
             ++m_CurrentDraw;
@@ -880,6 +886,12 @@ void MeshSorter::RenderMeshes(
 {
     ASSERT(m_DSV != nullptr);
 
+    BlockResourceManager::InstancesManager& manager = BlockResourceManager::getManager(currentBlockType);
+    if (manager.visibleBlockNumber ==0)
+    {
+        return;
+    }
+    
     Renderer::UpdateGlobalDescriptors();
 
     context.SetRootSignature(m_RootSig);
@@ -943,8 +955,10 @@ void MeshSorter::RenderMeshes(
             m_Scissor.bottom = m_DSV->GetWidth();
         }
     }
-    BlockResourceManager::InstancesManager& manager = BlockResourceManager::getManager(currentBlockType);
-    context.GetCommandList()->SetGraphicsRootShaderResourceView(kInstanceData, manager.InstanceBuffer->Resource()->GetGPUVirtualAddress());
+
+    context.GetCommandList()->SetGraphicsRootShaderResourceView(kInstanceData,
+                                                                manager.InstanceBuffer->Resource()->
+                                                                        GetGPUVirtualAddress());
     for (; m_CurrentPass <= pass; m_CurrentPass = (DrawPass)(m_CurrentPass + 1))
     {
         const uint32_t passCount = m_PassCounts[m_CurrentPass];
@@ -1021,7 +1035,7 @@ void MeshSorter::RenderMeshes(
 
             // for (uint32_t i = 0; i < mesh.numDraws; ++i)
             //     context.DrawIndexed(mesh.draw[i].primCount, mesh.draw[i].startIndex, mesh.draw[i].baseVertex);
-            context.DrawIndexedInstanced(mesh.draw[0].primCount, manager.visibleBlockNumber,0,0,0);
+            context.DrawIndexedInstanced(mesh.draw[0].primCount, manager.visibleBlockNumber, 0, 0, 0);
             ++m_CurrentDraw;
         }
     }
