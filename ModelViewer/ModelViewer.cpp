@@ -192,7 +192,7 @@ void ModelViewer::Startup(void)
 
     std::wstring gltfFileName;
 
-    bool forceRebuild = true;
+    bool forceRebuild = false;
     uint32_t rebuildValue;
     if (CommandLineArgs::GetInteger(L"rebuild", rebuildValue))
         forceRebuild = rebuildValue != 0;
@@ -208,7 +208,7 @@ void ModelViewer::Startup(void)
     }
     else
     {
-        worldMap = new WorldMap(5,16,0);
+        worldMap = new WorldMap(5,16,25);
         worldBlocks = worldMap->getBlocksNeedRender(m_Camera.GetPosition());
         
         // world_block = WorldBlock(Vector3(0, 0, 0), 16);
@@ -327,7 +327,6 @@ void ModelViewer::RenderScene(void)
 {
     threadResultVector.clear();
     std::cout << "cameraPosition x: "<<m_Camera.GetPosition().GetX()<<" y: "<<m_Camera.GetPosition().GetY()<<" z: "<<m_Camera.GetPosition().GetZ()<<std::endl;
-    worldBlocks = worldMap->getBlocksNeedRender(m_Camera.GetPosition());
     std::cout << "start a render" << std::endl;
     GraphicsContext& gfxContext = GraphicsContext::Begin(L"Scene Render");
     uint32_t FrameIndex = TemporalEffects::GetFrameIndexMod2();
@@ -365,23 +364,8 @@ void ModelViewer::RenderScene(void)
     sorter.SetScissor(scissor);
     sorter.SetDepthStencilTarget(g_SceneDepthBuffer);
     sorter.AddRenderTarget(g_SceneColorBuffer);
-    
-    BlockResourceManager::clearVisibleBlocks();
 
-    for (auto& block : worldBlocks)
-    {
-        threadResultVector.emplace_back(thread_pool.enqueue([&]
-        {
-            bool result = block->Render(m_Camera, gfxContext);
-            return result;
-        }));
-    }
-
-    for (auto&& result : threadResultVector)
-    {
-        result.wait();
-        std::cout << "result ok" << std::endl;
-    }
+    worldMap->renderVisibleBlocks(m_Camera, gfxContext);
 
     {
         ScopedTimer _prof(L"Depth Pre-Pass", gfxContext);

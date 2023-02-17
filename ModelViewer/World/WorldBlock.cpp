@@ -99,7 +99,6 @@ void WorldBlock::RandomlyGenerateBlocks()
             //float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001,float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001, 0.8
             //double height = noise.noise((float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001)*0.001,(float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001)*0.001, 0.8);
             double height = noise.noise((float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001)*0.0005,(float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001)*0.0005);
-            std::cout << "height: "<<height  <<std::endl;
             int realHeight = this->worldBlockDepth * (height+1)/2;
             if (realHeight >= this->worldBlockDepth) realHeight = this->worldBlockDepth-1;
             if (realHeight <0) realHeight = 0;
@@ -130,7 +129,7 @@ void WorldBlock::InitBlocks()
 {
     RandomlyGenerateBlocks();
     SearchBlocksAdjacent2OuterAir();
-    InitOcclusionQueriesHeaps();
+    // InitOcclusionQueriesHeaps();
     CreateOctreeNode(this->octreeNode, 0, this->worldBlockSize-1, 0, this->worldBlockSize-1, 0, this->worldBlockDepth-1, 0);
 }
 

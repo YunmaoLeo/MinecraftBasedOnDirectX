@@ -19,7 +19,11 @@ public:
         }
     };
     WorldMap(int renderAreaCount, int unitAreaSize, int threadCount);
+    bool createUnitWorldBlock(BlockPosition pos);
     std::vector<WorldBlock*>& getBlocksNeedRender(Math::Vector3 position);
+    void renderVisibleBlocks(Camera& camera, GraphicsContext& context);
+    void waitThreadsWorkDone();
+
 private:
     struct hashName
     {
@@ -29,9 +33,11 @@ private:
         }
     };
     void initBufferArea(BlockPosition& pos);
+    void updateBlockNeedRender(Vector3 position);
     BlockPosition getPositionOfCamera(Math::Vector3 position);
     Vector3 mapOriginPoint;
-    // ThreadPool thread_pool;
+    ThreadPool* thread_pool;
+    std::vector<std::future<bool>> threadResultVector;
     int UnitAreaSize;
     int RenderAreaCount;
     std::unordered_map<BlockPosition, WorldBlock*, hashName>* worldMap{};
