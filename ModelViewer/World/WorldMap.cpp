@@ -33,12 +33,15 @@ WorldMap::WorldMap(int renderAreaCount, int unitAreaSize, int threadCount)
 
 bool WorldMap::createUnitWorldBlock(BlockPosition pos)
 {
+    auto start = GetTickCount();
     int x = pos.x;
     int y = pos.y;
     Vector3 originPoint = Vector3((x - 0.5) * UnitAreaSize * World::UnitBlockSize,
                                   (y - 0.5) * UnitAreaSize * World::UnitBlockSize, 0);
     WorldBlock* block = new WorldBlock(originPoint, UnitAreaSize);
     worldMap->emplace(BlockPosition{x, y}, block);
+    auto end = GetTickCount();
+    std:: cout << "world block generate time: "<< end-start << "ms"<<std::endl;
     return true;
 }
 
@@ -46,8 +49,8 @@ void WorldMap::updateBlockNeedRender(Vector3 position)
 {
     BlockPosition pos = getPositionOfCamera(position);
     BlocksNeedRender.clear();
-
-    // initBufferArea(pos);
+    
+    initBufferArea(pos);
 
     for (int x = pos.x - (RenderAreaCount / 2); x <= pos.x + RenderAreaCount / 2; x++)
     {
@@ -98,17 +101,25 @@ void WorldMap::waitThreadsWorkDone()
     }
 }
 
-void WorldMap::initBufferArea(BlockPosition& pos)
+void WorldMap::initBufferArea(BlockPosition pos)
 {
     int renderCount = RenderAreaCount + 2;
-    for (int x = 0 - (renderCount / 2); x <= renderCount / 2; x++)
+    for (int x = pos.x - (renderCount / 2); x <= pos.x + renderCount / 2; x++)
     {
-        for (int y = 0 - (renderCount / 2); y <= renderCount / 2; y++)
+        for (int y = pos.y - (renderCount / 2); y <= pos.y + renderCount / 2; y++)
         {
-            Vector3 originPoint = Vector3((x - 0.5) * UnitAreaSize * World::UnitBlockSize,
-                                          (y - 0.5) * UnitAreaSize * World::UnitBlockSize, 0);
-            WorldBlock* block = new WorldBlock(originPoint, UnitAreaSize);
-            worldMap->emplace(BlockPosition{x, y}, block);
+            BlockPosition blockPos{x,y};
+            if (worldMap->find(blockPos)!=worldMap->end()
+                || BlocksCreating.find(blockPos)!=BlocksCreating.end())
+            {
+                continue;
+            }
+            BlocksCreating.insert(blockPos);
+            thread_pool->enqueue([=]
+            {
+                createUnitWorldBlock(blockPos);
+                BlocksCreating.erase(blockPos);
+            });
         }
     }
 }

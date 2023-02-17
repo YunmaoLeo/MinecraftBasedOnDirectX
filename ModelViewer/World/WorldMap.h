@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <unordered_map>
+#include <unordered_set>
 
 #include "ThreadPool.h"
 #include "WorldBlock.h"
@@ -32,12 +33,13 @@ private:
             return std::hash<int>()(pos.x) ^ std::hash<int>()(pos.y);
         }
     };
-    void initBufferArea(BlockPosition& pos);
+    void initBufferArea(BlockPosition pos);
     void updateBlockNeedRender(Vector3 position);
     BlockPosition getPositionOfCamera(Math::Vector3 position);
     Vector3 mapOriginPoint;
     ThreadPool* thread_pool;
     std::vector<std::future<bool>> threadResultVector;
+    std::unordered_set<BlockPosition, hashName> BlocksCreating;
     int UnitAreaSize;
     int RenderAreaCount;
     std::unordered_map<BlockPosition, WorldBlock*, hashName>* worldMap{};
