@@ -7,6 +7,7 @@
 #include "ShadowCamera.h"
 #include "SimplexNoise.h"
 #include "World.h"
+#include "WorldMap.h"
 #include "Math/PerlinNoise.h"
 #include "Math/Random.h"
 using namespace Math;
@@ -89,7 +90,7 @@ void WorldBlock::ReadDepthBuffer(GraphicsContext& context)
 void WorldBlock::RandomlyGenerateBlocks()
 {
     //PerlinNoise noise = PerlinNoise(9);
-    SimplexNoise noise(0.8,1,0.5,0.7);
+    SimplexNoise noise(0.5,1,0.5,0.6);
     RandomNumberGenerator generator;
     generator.SetSeed(1);
     for (int x = 0; x < worldBlockSize; x++)
@@ -98,24 +99,35 @@ void WorldBlock::RandomlyGenerateBlocks()
         {
             //float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001,float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001, 0.8
             //double height = noise.noise((float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001)*0.001,(float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001)*0.001, 0.8);
-            double height = noise.noise((float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001)*0.0005,(float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001)*0.0005);
+            double height = noise.fractal(4, (float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001)*0.0005,(float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001)*0.0005);
             int realHeight = this->worldBlockDepth * (height+1)/2;
             if (realHeight >= this->worldBlockDepth) realHeight = this->worldBlockDepth-1;
             if (realHeight <0) realHeight = 0;
             for (int z = 0; z < realHeight; z++)
             {
                 BlockType type;
-                if (z == realHeight-1)
-                {
-                    type = Dirt;
-                }
-                else if (float(z)/float(realHeight) < 0.5 + generator.NextInt(-1,1)*0.15)
+                // if (z == realHeight-1)
+                // {
+                //     type = Dirt;
+                // }
+                if (float(z)/float(realHeight) < 0.5 + generator.NextInt(-1,1)*0.15)
                 {
                     type = Stone;
                 }
-                else if (float(z)/float(realHeight) < 1)
+                else
                 {
-                    type = Dirt;
+                    if (realHeight < 22)
+                    {
+                        type=Water;
+                    }
+                    else if (realHeight < 40)
+                    {
+                        type = Grass;
+                    }
+                    else
+                    {
+                        type = Stone;
+                    }
                 }
                 Vector3 pointPos = originPoint + Vector3(x + 0.5f, y + 0.5f, z + 0.5f) * UnitBlockSize*1.001;
                 pointPos = Vector3(pointPos.GetX(), pointPos.GetZ(), pointPos.GetY());
@@ -123,6 +135,24 @@ void WorldBlock::RandomlyGenerateBlocks()
             }
         }
     }
+    for (int z = 0; z<worldBlockDepth; z++)
+    {
+        for (int y=0;y<worldBlockSize; y++)
+        {
+            blocks[0][y][z].isEdgeBlock = true;
+            blocks[worldBlockSize-1][y][z].isEdgeBlock = true;
+        }
+    }
+
+    for (int z = 0; z<worldBlockDepth; z++)
+    {
+        for (int x=0;x<worldBlockSize; x++)
+        {
+            blocks[x][0][z].isEdgeBlock = true;
+            blocks[x][worldBlockSize-1][z].isEdgeBlock = true;
+        }
+    }
+    
 }
 
 void WorldBlock::InitBlocks()
@@ -320,7 +350,7 @@ void WorldBlock::RenderBlocksInRange(int minX, int maxX, int minY, int maxY, int
                 Block& block = blocks[x][y][z];
 
                 if (!block.IsNull()
-                    && block.adjacent2OuterAir
+                    && isAdjacent2OuterAir(x,y,z)
                     && camera.GetWorldSpaceFrustum().IntersectSphere(block.boundingSphere)
                     )
                 {
@@ -342,13 +372,85 @@ void WorldBlock::RenderBlocksInRangeNoIntersectCheck(int minX, int maxX, int min
                 Block& block = blocks[x][y][z];
 
                 if (!block.IsNull()
-                    && block.adjacent2OuterAir)
+                    && isAdjacent2OuterAir(x,y,z))
                 {
                     RenderSingleBlock(x, y, z);
                 }
             }
         }
     }
+}
+
+bool WorldBlock::isAdjacent2OuterAir(int x, int y, int z)
+{
+    if (blocks[x][y][z].adjacent2OuterAir)
+    {
+        return true;
+    }
+    bool hasSiblingVisibleAir = false;
+    if ( (x==0 || y==0 || x==worldBlockSize-1 || y==worldBlockSize-1) && 
+        !blocks[x][y][z].hasCheckSibling)
+    {
+        if (x == 0)
+        {
+            if (worldMap->hasBlock(posX-1,posY))
+            {
+                WorldBlock* block = worldMap->getWorldBlockRef(posX-1, posY);
+                Block& siblingBlock = block->blocks[worldBlockSize-1][y][z];
+                if (siblingBlock.adjacent2OuterAir && siblingBlock.IsNull())
+                {
+                    hasSiblingVisibleAir = true;
+                }
+            }
+        }
+    
+        if (y == 0)
+        {
+            if (worldMap->hasBlock(posX,posY-1))
+            {
+                WorldBlock* block = worldMap->getWorldBlockRef(posX, posY-1);
+                Block& siblingBlock = block->blocks[x][worldBlockSize-1][z];
+                if (siblingBlock.adjacent2OuterAir && siblingBlock.IsNull())
+                {
+                    hasSiblingVisibleAir = true;
+                }
+            }
+        }
+    
+        if (x == worldBlockSize-1)
+        {
+            if (worldMap->hasBlock(posX+1,posY))
+            {
+                WorldBlock* block = worldMap->getWorldBlockRef(posX+1, posY);
+                Block& siblingBlock = block->blocks[0][y][z];
+                if (siblingBlock.adjacent2OuterAir && siblingBlock.IsNull())
+                {
+                    hasSiblingVisibleAir = true;
+                }
+            }
+        }
+    
+        if (y == worldBlockSize-1)
+        {
+            if (worldMap->hasBlock(posX,posY+1))
+            {
+                WorldBlock* block = worldMap->getWorldBlockRef(posX, posY+1);
+                Block& siblingBlock = block->blocks[x][0][z];
+                if (siblingBlock.adjacent2OuterAir && siblingBlock.IsNull())
+                {
+                    hasSiblingVisibleAir = true;
+                }
+            }
+        }
+        blocks[x][y][z].hasCheckSibling = true;
+    }
+    
+    if (hasSiblingVisibleAir)
+    {
+        blocks[x][y][z].adjacent2OuterAir = true;
+        return true;
+    }
+    return false;
 }
 
 void WorldBlock::CreateOctreeNode(OctreeNode* &node, int minX,int maxX, int minY, int maxY, int minZ, int maxZ, int depth)

@@ -208,7 +208,7 @@ void ModelViewer::Startup(void)
     }
     else
     {
-        worldMap = new WorldMap(5,16,25);
+        worldMap = new WorldMap(7,16,25);
         worldBlocks = worldMap->getBlocksNeedRender(m_Camera.GetPosition());
         
         // world_block = WorldBlock(Vector3(0, 0, 0), 16);
@@ -399,8 +399,8 @@ void ModelViewer::RenderScene(void)
             RenderBlocks(sorter, MeshSorter::kOpaque, gfxContext, globals);
         }
 
-        //Renderer::DrawSkybox(gfxContext, m_Camera, viewport, scissor);
-        //
+        Renderer::DrawSkybox(gfxContext, m_Camera, viewport, scissor);
+        
         RenderBlocks(sorter, MeshSorter::kTransparent, gfxContext, globals);
     }
     {

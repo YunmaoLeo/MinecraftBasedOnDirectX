@@ -32,6 +32,9 @@ public:
     float radius;
     bool isEmpty = true;
     bool isDirt = true;
+    bool isSiblingVisible = false;
+    bool hasCheckSibling = false;
+    bool isEdgeBlock = false;
     bool transparent = false;
     bool adjacent2OuterAir = false;
     Math::Vector3 position;

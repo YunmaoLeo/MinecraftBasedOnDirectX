@@ -39,6 +39,9 @@ bool WorldMap::createUnitWorldBlock(BlockPosition pos)
     Vector3 originPoint = Vector3((x - 0.5) * UnitAreaSize * World::UnitBlockSize,
                                   (y - 0.5) * UnitAreaSize * World::UnitBlockSize, 0);
     WorldBlock* block = new WorldBlock(originPoint, UnitAreaSize);
+    block->worldMap = this;
+    block->posX = x;
+    block->posY = y;
     worldMap->emplace(BlockPosition{x, y}, block);
     auto end = GetTickCount();
     std:: cout << "world block generate time: "<< end-start << "ms"<<std::endl;
@@ -99,6 +102,16 @@ void WorldMap::waitThreadsWorkDone()
     {
         result.wait();
     }
+}
+
+WorldBlock*& WorldMap::getWorldBlockRef(int x, int y)
+{
+        return worldMap->at(BlockPosition{x,y});
+}
+
+bool WorldMap::hasBlock(int x, int y)
+{
+    return worldMap->find(BlockPosition{x,y})!=worldMap->end();
 }
 
 void WorldMap::initBufferArea(BlockPosition pos)

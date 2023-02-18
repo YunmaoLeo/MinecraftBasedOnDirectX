@@ -58,6 +58,7 @@ void BlockResourceManager::addBlockIntoManager(BlockType blockType, Math::Vector
     if (manager.MAX_BLOCK_NUMBER <= manager.visibleBlockNumber+1)
     {
         std::cout << "achieve max number" << std::endl;
+        mtx.unlock();
         return;
     }
 

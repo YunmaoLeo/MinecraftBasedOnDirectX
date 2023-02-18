@@ -24,6 +24,9 @@ public:
     std::vector<WorldBlock*>& getBlocksNeedRender(Math::Vector3 position);
     void renderVisibleBlocks(Camera& camera, GraphicsContext& context);
     void waitThreadsWorkDone();
+    
+    WorldBlock*& getWorldBlockRef(int x, int y);
+    bool hasBlock(int x, int y);
 
 private:
     struct hashName
@@ -44,6 +47,5 @@ private:
     int RenderAreaCount;
     std::unordered_map<BlockPosition, WorldBlock*, hashName>* worldMap{};
     std::vector<WorldBlock*> BlocksNeedRender{};
-
 
 };

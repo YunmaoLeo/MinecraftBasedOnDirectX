@@ -47,7 +47,6 @@
 #include "CompiledShaders/CutoutDepthPS.h"
 #include "CompiledShaders/SkyboxVS.h"
 #include "CompiledShaders/SkyboxPS.h"
-#include "CompiledShaders/DefaultSimplePS.h"
 
 #pragma warning(disable:4319) // '~': zero extending 'uint32_t' to 'uint64_t' of greater size
 

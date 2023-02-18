@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <intsafe.h>
 #include <iostream>
+#include <unordered_set>
 #include <vector>
 
 #include "OctreeNode.h"
@@ -9,6 +10,7 @@
 #include "../Blocks/Block.h"
 #include "Math/Vector.h"
 
+class WorldMap;
 struct GlobalConstants;
 // WorldBlock 中的每一个单元Block对应一个单位长度，以便于忽略掉长度带来的影响
 // Block的坐标以左下方点位作为原点计算，左下方坐标由World创建时传入
@@ -29,13 +31,17 @@ public:
     static int blockId;
     int id;
 
-    struct Point
+    struct BlockPosition
     {
-        uint16_t x;
-        uint16_t y;
-        uint16_t z;
+        int x;
+        int y;
+        int z;
 
-        Point(uint16_t x, uint16_t y, uint16_t z):x(x),y(y),z(z) {}
+        BlockPosition(int x, int y, int z):x(x),y(y),z(z) {}
+        bool operator==(const BlockPosition& pos) const
+        {
+            return this->x == pos.x && this->y == pos.y && this->z == pos.z;
+        }
     };
 
     WorldBlock(){};
@@ -59,6 +65,7 @@ public:
     void RenderBlocksInRange(int minX, int maxX, int minY, int maxY, int minZ, int maxZ,
                              const Math::Camera& camera);
     void RenderBlocksInRangeNoIntersectCheck(int minX, int maxX, int minY, int maxY, int minZ, int maxZ);
+    bool isAdjacent2OuterAir(int x, int y, int z);
     void CreateOctreeNode(OctreeNode* &node, int minX,int maxX, int minY, int maxY, int minZ, int maxZ, int depth);
     void OctreeRenderBlocks(OctreeNode*& node, const Math::Camera& camera);
     void OctreeRenderBlocks(int minX, int maxX, int minY, int maxY, int minZ, int maxZ, int depth,
@@ -74,7 +81,10 @@ public:
     uint16_t worldBlockDepth = 64;
     std::vector<std::vector<std::vector<Block>>> blocks{};
     std::vector<std::vector<std::vector<bool>>> blocksOcclusionState{};
-    std::vector<Point> blocksRenderedVector{};
+    std::vector<BlockPosition> blocksRenderedVector{};
+    WorldMap* worldMap;
+    int posX;
+    int posY;
 
 private:
     ID3D12Resource* m_queryResult;
