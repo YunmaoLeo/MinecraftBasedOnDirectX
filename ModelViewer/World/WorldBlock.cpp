@@ -305,7 +305,6 @@ bool WorldBlock::GetUnitBlockOcclusionResultFromVector(int x, int y, int z) cons
 
 void WorldBlock::CheckOcclusion(Renderer::MeshSorter& sorter, GraphicsContext& context, GlobalConstants& globals)
 {
-    std::cout << "checkOcclusionCount: "<<blocksRenderedVector.size()<<std::endl; 
     context.GetCommandList()->ResourceBarrier(
         1, &CD3DX12_RESOURCE_BARRIER::Transition(m_queryResult, D3D12_RESOURCE_STATE_PREDICATION,
                                                  D3D12_RESOURCE_STATE_COPY_DEST));
@@ -519,7 +518,6 @@ void WorldBlock::OctreeRenderBlocks(OctreeNode* &node, const Camera& camera)
 
     if (EnableContainTest && camera.GetWorldSpaceFrustum().ContainingBoundingBox(box))
     {
-        std::cout << "pass contain test" << std::endl;
         RenderBlocksInRangeNoIntersectCheck(minX, maxX, minY, maxY, minZ, maxZ);
         return;
     }
@@ -575,7 +573,6 @@ void WorldBlock::OctreeRenderBlocks(int minX, int maxX, int minY, int maxY, int 
 
     if (EnableContainTest && camera.GetWorldSpaceFrustum().ContainingBoundingBox(box))
     {
-        std::cout << "pass contain test" << std::endl;
         RenderBlocksInRangeNoIntersectCheck(minX, maxX, minY, maxY, minZ, maxZ);
         return;
     }
@@ -650,7 +647,6 @@ bool WorldBlock::Render(const Camera& camera, GraphicsContext& context)
             }
         }
     }
-    std::cout << "render count: " << count << " blockID: " << this->id<< std::endl;
     return false;
 }
 

@@ -79,7 +79,6 @@ private:
 
     ModelInstance m_ModelInst;
     WorldBlock world_block;
-    vector<WorldBlock*> worldBlocks;
     WorldMap* worldMap;
     ShadowCamera m_SunShadow;
 };
@@ -209,7 +208,6 @@ void ModelViewer::Startup(void)
     else
     {
         worldMap = new WorldMap(7,16,25);
-        worldBlocks = worldMap->getBlocksNeedRender(m_Camera.GetPosition());
         
         // world_block = WorldBlock(Vector3(0, 0, 0), 16);
         MotionBlur::Enable = false;
@@ -254,10 +252,6 @@ void ModelViewer::Update(float deltaT)
     m_CameraController->Update(deltaT);
 
     GraphicsContext& gfxContext = GraphicsContext::Begin(L"Scene Update");
-    for (int x = 0; x < worldBlocks.size(); x++)
-    {
-        worldBlocks[x]->Update(deltaT);
-    }
 
     gfxContext.Finish();
 
@@ -326,8 +320,6 @@ void ModelViewer::RenderShadowBlocks(MeshSorter& sorter, MeshSorter::DrawPass pa
 void ModelViewer::RenderScene(void)
 {
     threadResultVector.clear();
-    std::cout << "cameraPosition x: "<<m_Camera.GetPosition().GetX()<<" y: "<<m_Camera.GetPosition().GetY()<<" z: "<<m_Camera.GetPosition().GetZ()<<std::endl;
-    std::cout << "start a render" << std::endl;
     GraphicsContext& gfxContext = GraphicsContext::Begin(L"Scene Render");
     uint32_t FrameIndex = TemporalEffects::GetFrameIndexMod2();
     const D3D12_VIEWPORT& viewport = m_MainViewport;
@@ -365,7 +357,10 @@ void ModelViewer::RenderScene(void)
     sorter.SetDepthStencilTarget(g_SceneDepthBuffer);
     sorter.AddRenderTarget(g_SceneColorBuffer);
 
-    worldMap->renderVisibleBlocks(m_Camera, gfxContext);
+    {
+        ScopedTimer _prof(L"renderVisibleBlocksInCPU", gfxContext);
+        worldMap->renderVisibleBlocks(m_Camera, gfxContext);
+    }
 
     {
         ScopedTimer _prof(L"Depth Pre-Pass", gfxContext);
