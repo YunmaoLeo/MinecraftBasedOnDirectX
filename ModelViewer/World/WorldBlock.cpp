@@ -90,7 +90,9 @@ void WorldBlock::ReadDepthBuffer(GraphicsContext& context)
 void WorldBlock::RandomlyGenerateBlocks()
 {
     //PerlinNoise noise = PerlinNoise(9);
-    SimplexNoise noise(0.5,1,0.5,0.6);
+    SimplexNoise lowNoise(0.4,0.05,0.4,0.5);
+    SimplexNoise highNoise(1,1,0.5,0.5);
+    SimplexNoise blendNoise(0.2,1,0.5,0.3);
     RandomNumberGenerator generator;
     generator.SetSeed(1);
     for (int x = 0; x < worldBlockSize; x++)
@@ -99,8 +101,23 @@ void WorldBlock::RandomlyGenerateBlocks()
         {
             //float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001,float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001, 0.8
             //double height = noise.noise((float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001)*0.001,(float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001)*0.001, 0.8);
-            double height = noise.fractal(4, (float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001)*0.0005,(float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001)*0.0005);
-            int realHeight = this->worldBlockDepth * (height+1)/2;
+            double low = lowNoise.fractal(4, (float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001)*0.0005,(float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001)*0.0005);
+            double high = highNoise.fractal(4, (float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001)*0.0005,(float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001)*0.0005);
+            double blend = blendNoise.fractal(5, (float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001)*0.0005,(float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001)*0.0005);
+
+            blend +=1;
+            double value = (blend * high + (2-blend) * low)/2;
+            if (blend > 1.3)
+            {
+                value = high;
+            }
+            if (blend < 0.7)
+            {
+                value = low;
+            }
+            // value = low;
+            
+            int realHeight = this->worldBlockDepth * (value+1)/2;
             if (realHeight >= this->worldBlockDepth) realHeight = this->worldBlockDepth-1;
             if (realHeight <0) realHeight = 0;
             for (int z = 0; z < realHeight; z++)
