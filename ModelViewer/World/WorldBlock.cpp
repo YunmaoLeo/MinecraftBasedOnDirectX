@@ -19,73 +19,6 @@ BoolVar EnableOctree("Octree/EnableOctree", true);
 BoolVar EnableContainTest("Octree/EnableContainTest", true);
 BoolVar EnableOctreeCompute("Octree/ComputeOptimize", false);
 
-void WorldBlock::InitOcclusionQueriesHeaps()
-{
-    D3D12_QUERY_HEAP_DESC occlusionQueryHeapDesc = {};
-    const uint16_t blockCount = worldBlockSize * worldBlockSize * worldBlockDepth;
-    occlusionQueryHeapDesc.Count = blockCount;
-    occlusionQueryHeapDesc.Type = D3D12_QUERY_HEAP_TYPE_OCCLUSION;
-
-    Graphics::g_Device->CreateQueryHeap(&occlusionQueryHeapDesc, IID_PPV_ARGS(&m_queryHeap));
-
-    CD3DX12_HEAP_PROPERTIES resultHeapProps(D3D12_HEAP_TYPE_DEFAULT);
-    auto queryBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(uint64_t) * blockCount);
-
-    Graphics::g_Device->CreateCommittedResource(
-        &resultHeapProps,
-        D3D12_HEAP_FLAG_NONE,
-        &queryBufferDesc,
-        D3D12_RESOURCE_STATE_COPY_SOURCE,
-        nullptr,
-        IID_PPV_ARGS(&m_queryResult)
-    );
-
-    CD3DX12_HEAP_PROPERTIES readBackHeapProps(D3D12_HEAP_TYPE_READBACK);
-    Graphics::g_Device->CreateCommittedResource(
-        &readBackHeapProps,
-        D3D12_HEAP_FLAG_NONE,
-        &queryBufferDesc,
-        D3D12_RESOURCE_STATE_COPY_DEST,
-        nullptr,
-        IID_PPV_ARGS(&m_queryReadBackBuffer));
-
-    auto depthBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(Graphics::g_SceneDepthBuffer.GetWidth() * Graphics::g_SceneColorBuffer.GetHeight() * sizeof(float));
-    
-    Graphics::g_Device->CreateCommittedResource(
-        &readBackHeapProps,
-        D3D12_HEAP_FLAG_NONE,
-        &depthBufferDesc,
-        D3D12_RESOURCE_STATE_COPY_DEST,
-        nullptr,
-        IID_PPV_ARGS(&m_depthReadBackBuffer));
-}
-
-void WorldBlock::CopyDepthBuffer(GraphicsContext& context)
-{
-    context.GetCommandList()->CopyResource(m_depthReadBackBuffer, Graphics::g_SceneDepthBuffer.GetResource());
-}
-
-void WorldBlock::ReadDepthBuffer(GraphicsContext& context)
-{
-    uint32_t width = Graphics::g_SceneDepthBuffer.GetWidth();
-    uint32_t height = Graphics::g_SceneDepthBuffer.GetHeight();
-    float* memory;
-    HRESULT result = m_depthReadBackBuffer->Map(0,
-        &CD3DX12_RANGE(0,width * height * 4),
-        reinterpret_cast<void**>(&memory));
-    printf("depthReadResult: %x \n", result);
-    for (uint32_t x=0; x<width; x++)
-    {
-        for (uint32_t y=0; y<height; y++)
-        {
-            uint32_t offset = (y * width + x);
-            if (*(memory+offset)!=0.0f)
-            {
-                std::cout << "depthRead Not null in x: "<<x<<" y: "<<y<<" with value: " << *(memory+offset)<<std::endl;
-            }
-        }
-    }
-}
 
 void WorldBlock::RandomlyGenerateBlocks()
 {
@@ -261,97 +194,9 @@ bool WorldBlock::CheckOutOfRange(int x, int y, int z) const
 
 void WorldBlock::RenderSingleBlock(int x, int y, int z)
 {
-    // blocksRenderedVector.push_back(Point(x, y, z));
-    if (Renderer::EnableOcclusion)
-    {
-        if (!GetUnitBlockOcclusionResultFromVector(x, y, z)
-            || !GetUnitBlockOcclusionResultFromVector(x + 1, y, z)
-            || !GetUnitBlockOcclusionResultFromVector(x - 1, y, z)
-            || !GetUnitBlockOcclusionResultFromVector(x, y + 1, z)
-            || !GetUnitBlockOcclusionResultFromVector(x, y - 1, z)
-            || !GetUnitBlockOcclusionResultFromVector(x, y, z + 1)
-            || !GetUnitBlockOcclusionResultFromVector(x, y, z - 1))
-        {
-            count++;
-            Block& block = blocks[x][y][z];
-            BlockResourceManager::addBlockIntoManager(block.blockType, block.position, block.sideSize);
-        }
-    }
-    else
-    {
         count++;
         Block& block = blocks[x][y][z];
         BlockResourceManager::addBlockIntoManager(block.blockType, block.position, block.sideSize);
-    }
-}
-
-void WorldBlock::GetAllBlockOcclusionResult()
-{
-    blocksOcclusionState.resize(worldBlockSize,
-                                std::vector<std::vector<bool>>(worldBlockSize,
-                                                               std::vector<bool>(worldBlockDepth, true)));
-
-    for (auto point : blocksRenderedVector)
-    {
-        int x = point.x;
-        int y = point.y;
-        int z = point.z;
-        blocksOcclusionState[x][y][z] = GetUnitBlockOcclusionResult(x, y, z);
-    }
-}
-
-bool WorldBlock::GetUnitBlockOcclusionResult(int x, int y, int z) const
-{
-    int offset = GetBlockOffsetOnHeap(x, y, z);
-    size_t sizeOffset = offset * sizeof(uint64_t);
-    uint64_t* CheckMemory = nullptr;
-    m_queryReadBackBuffer->Map(0,
-                               &CD3DX12_RANGE(sizeOffset, sizeOffset + sizeof(uint64_t)),
-                               reinterpret_cast<void**>(&CheckMemory));
-    return *(CheckMemory + offset) == 0 ? true : false;
-}
-
-bool WorldBlock::GetUnitBlockOcclusionResultFromVector(int x, int y, int z) const
-{
-    if (CheckOutOfRange(x,y,z))
-    {
-        return true;
-    }
-    return blocksOcclusionState[x][y][z];
-}
-
-void WorldBlock::CheckOcclusion(Renderer::MeshSorter& sorter, GraphicsContext& context, GlobalConstants& globals)
-{
-    context.GetCommandList()->ResourceBarrier(
-        1, &CD3DX12_RESOURCE_BARRIER::Transition(m_queryResult, D3D12_RESOURCE_STATE_PREDICATION,
-                                                 D3D12_RESOURCE_STATE_COPY_DEST));
-    for (auto point : blocksRenderedVector)
-    {
-        sorter.ClearMeshes();
-        int x = point.x;
-        int y = point.y;
-        int z = point.z;
-
-        context.BeginQuery(m_queryHeap, D3D12_QUERY_TYPE_BINARY_OCCLUSION, GetBlockOffsetOnHeap(x, y, z));
-
-        // blocks[x][y][z].Render(sorter);
-        sorter.Sort();
-        sorter.RenderMeshesForOcclusion(Renderer::MeshSorter::kZPass, context, globals);
-        context.EndQuery(m_queryHeap, D3D12_QUERY_TYPE_BINARY_OCCLUSION, GetBlockOffsetOnHeap(x, y, z));
-    }
-
-    for (auto point:blocksRenderedVector)
-    {
-        int x= point.x;
-        int y = point.y;
-        int z = point.z;
-        context.GetCommandList()->ResolveQueryData(m_queryHeap, D3D12_QUERY_TYPE_BINARY_OCCLUSION,
-                                           GetBlockOffsetOnHeap(x, y, z), 1, m_queryResult,
-                                           GetBlockOffsetOnHeap(x, y, z) * 8);
-    }
-    context.GetCommandList()->ResourceBarrier(
-        1, &CD3DX12_RESOURCE_BARRIER::Transition(m_queryResult, D3D12_RESOURCE_STATE_COPY_DEST,
-                                                 D3D12_RESOURCE_STATE_PREDICATION));
 }
 
 void WorldBlock::RenderBlocksInRange(int minX, int maxX, int minY, int maxY, int minZ, int maxZ,
@@ -399,13 +244,14 @@ void WorldBlock::RenderBlocksInRangeNoIntersectCheck(int minX, int maxX, int min
 
 bool WorldBlock::isAdjacent2OuterAir(int x, int y, int z)
 {
-    if (blocks[x][y][z].adjacent2OuterAir)
+    Block& block = blocks[x][y][z];
+    if (block.adjacent2OuterAir)
     {
         return true;
     }
     bool hasSiblingVisibleAir = false;
-    if ( (x==0 || y==0 || x==worldBlockSize-1 || y==worldBlockSize-1) && 
-        !blocks[x][y][z].hasCheckSibling)
+    if ( block.isEdgeBlock && 
+        !block.hasCheckSibling)
     {
         if (x == 0)
         {
@@ -458,12 +304,12 @@ bool WorldBlock::isAdjacent2OuterAir(int x, int y, int z)
                 }
             }
         }
-        blocks[x][y][z].hasCheckSibling = true;
+        block.hasCheckSibling = true;
     }
     
     if (hasSiblingVisibleAir)
     {
-        blocks[x][y][z].adjacent2OuterAir = true;
+        block.adjacent2OuterAir = true;
         return true;
     }
     return false;
@@ -617,19 +463,8 @@ void WorldBlock::OctreeRenderBlocks(int minX, int maxX, int minY, int maxY, int 
     OctreeRenderBlocks(middleX + 1, maxX, middleY + 1, maxY, middleZ + 1, maxZ, depth + 1, camera);
 }
 
-void WorldBlock::CopyOnReadBackBuffer(GraphicsContext& context)
-{
-    context.GetCommandList()->CopyResource(m_queryReadBackBuffer, m_queryResult);
-}
-
 bool WorldBlock::Render(const Camera& camera, GraphicsContext& context)
 {
-    if (Renderer::EnableOcclusion)
-    {
-        CopyOnReadBackBuffer(context);
-        GetAllBlockOcclusionResult();
-    }
-
     // blocksRenderedVector.clear();
     count = 0;
     if (EnableOctree)

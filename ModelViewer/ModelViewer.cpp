@@ -400,8 +400,6 @@ void ModelViewer::RenderScene(void)
     }
     {
         ScopedTimer _prof(L"CheckOcclusionRender", gfxContext);
-        if (Renderer::EnableOcclusion)
-            world_block.CheckOcclusion(sorter, gfxContext, globals);
     }
 
     gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_COPY_SOURCE);
