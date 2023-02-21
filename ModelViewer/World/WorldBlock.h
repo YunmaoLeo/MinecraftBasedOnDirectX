@@ -27,7 +27,7 @@ public:
         id = blockId;
         blockId++;
     }
-
+    
     static int blockId;
     int id;
 
@@ -47,7 +47,13 @@ public:
     WorldBlock(){};
 
     void RandomlyGenerateBlocks();
+    static bool Intersect(const Math::Vector3& ori, const Math::Vector3& dir, const Math::AxisAlignedBox& box, float& t);
     void InitBlocks();
+    bool FindPickBlockInRange(int minX, int maxX, int minY, int maxY, int minZ, int maxZ, Math::Vector3 ori,
+                              Math::Vector3 dir, Block*& empty, Block*& entity);
+    bool FindPickBlockInOctree(OctreeNode* node, Math::Vector3& ori, Math::Vector3& dir, Block*& empty, Block*& entity);
+    std::vector<Block*> getSiblingBlocks(int x, int y, int z);
+    bool FindPickBlock(Math::Vector3& ori, Math::Vector3& dir, Block*& empty, Block*& entity);
 
     void Update(float deltaTime);
     int GetBlockOffsetOnHeap(int x, int y, int z) const;

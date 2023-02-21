@@ -9,12 +9,12 @@ class Block
     friend WorldBlock;
 
 public:
-    Block(Math::Vector3& position, BlockResourceManager::BlockType type, float radius);
 
     Block()
     {
     }
 
+    Block(Math::Vector3& position, BlockResourceManager::BlockType type, float sideSize, bool empty);
     Block& operator=(const Block& block);
 
 
@@ -32,15 +32,17 @@ public:
     float radius;
     bool isEmpty = true;
     bool isDirt = true;
-    bool isSiblingVisible = false;
     bool hasCheckSibling = false;
     bool isEdgeBlock = false;
     bool transparent = false;
     bool adjacent2OuterAir = false;
     Math::Vector3 position;
     BlockResourceManager::BlockType blockType;
-    Math::BoundingSphere boundingSphere;
+    // Math::BoundingSphere boundingSphere;
     Math::AxisAlignedBox axisAlignedBox;
+
+    Math::Matrix4* worldMatrix;
+    Math::Matrix4* worldIT;
 
 private:
 };

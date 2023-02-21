@@ -9,6 +9,12 @@ using namespace Math;
 class WorldMap
 {
 public:
+    static float minEntityDis;
+    static int entityX;
+    static int entityY;
+    static int entityZ;
+    static int entityBlockX ;
+    static int entityBlockY ;
     struct BlockPosition
     {
         int x;
@@ -21,6 +27,9 @@ public:
     };
     WorldMap(int renderAreaCount, int unitAreaSize, int threadCount);
     bool createUnitWorldBlock(BlockPosition pos);
+    void PutBlock(Vector3& ori, Vector3& dir, BlockResourceManager::BlockType type);
+    void DeleteBlock(Vector3& ori, Vector3& dir);
+    void FindPickBlock(Vector3& ori, Vector3& dir, Block*& empty, Block*& entity);
     std::vector<WorldBlock*>& getBlocksNeedRender(Math::Vector3 position);
     void renderVisibleBlocks(Camera& camera, GraphicsContext& context);
     void waitThreadsWorkDone();

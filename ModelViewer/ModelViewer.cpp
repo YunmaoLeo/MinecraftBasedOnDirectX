@@ -57,6 +57,7 @@ public:
     {
     }
 
+    void PickItem(int sx, int sy);
     virtual void Startup(void) override;
     virtual void Cleanup(void) override;
 
@@ -82,7 +83,6 @@ private:
     WorldMap* worldMap;
     ShadowCamera m_SunShadow;
 };
-
 
 NumVar ShadowDimX("Sponza/Lighting/Shadow Dim X", 5000, 1000, 10000, 100);
 NumVar ShadowDimY("Sponza/Lighting/Shadow Dim Y", 3000, 1000, 10000, 100);
@@ -170,6 +170,19 @@ void LoadIBLTextures()
 
 int WorldBlock::blockId = 0;
 
+void ModelViewer::PickItem(int sx, int sy)
+{
+    Matrix4 P = m_Camera.GetProjMatrix();
+    float vx = (+2.0f*sx / g_SceneColorBuffer.GetWidth() - 1.0f) / P.GetX().GetX();
+    float vy = (-2.0f*sy / g_SceneColorBuffer.GetHeight() + 1.0f) / P.GetY().GetY();
+
+    XMVECTOR rayOrigin = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+    XMVECTOR rayDir = XMVectorSet(vx, vy, 1.0f, 0.0f);
+
+    XMMATRIX V = m_Camera.GetViewMatrix();
+    XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(V),V);
+}
+
 void ModelViewer::Startup(void)
 {
     // 初始化动态模糊
@@ -207,7 +220,7 @@ void ModelViewer::Startup(void)
     }
     else
     {
-        worldMap = new WorldMap(7,16,25);
+        worldMap = new WorldMap(9,16,25);
         
         // world_block = WorldBlock(Vector3(0, 0, 0), 16);
         MotionBlur::Enable = false;
@@ -243,7 +256,7 @@ namespace Graphics
 void ModelViewer::Update(float deltaT)
 {
     ScopedTimer _prof(L"Update State");
-
+    
     if (GameInput::IsFirstPressed(GameInput::kLShoulder))
         DebugZoom.Decrement();
     else if (GameInput::IsFirstPressed(GameInput::kRShoulder))
@@ -251,6 +264,18 @@ void ModelViewer::Update(float deltaT)
 
     m_CameraController->Update(deltaT);
 
+    Vector3 ori = m_Camera.GetPosition();
+    Vector3 dir = m_Camera.GetForwardVec();
+    if (GameInput::IsFirstReleased(GameInput::kKey_c))
+    {
+        worldMap->DeleteBlock(ori,dir);
+    }
+    if (GameInput::IsFirstReleased(GameInput::kKey_v))
+    {
+        worldMap->PutBlock(ori,dir, Grass);
+    }
+    
+    
     GraphicsContext& gfxContext = GraphicsContext::Begin(L"Scene Update");
 
     gfxContext.Finish();

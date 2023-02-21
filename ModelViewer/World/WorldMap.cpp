@@ -3,6 +3,14 @@
 #include "World.h"
 using namespace Math;
 
+
+float WorldMap::minEntityDis = INT_MAX;
+int WorldMap::entityX = 0;
+int WorldMap::entityY = 0;
+int WorldMap::entityZ = 0;
+int WorldMap::entityBlockX = 0;
+int WorldMap::entityBlockY = 0;
+
 WorldMap::WorldMap(int renderAreaCount, int unitAreaSize, int threadCount)
     : RenderAreaCount(renderAreaCount), UnitAreaSize(unitAreaSize)
 {
@@ -28,7 +36,6 @@ WorldMap::WorldMap(int renderAreaCount, int unitAreaSize, int threadCount)
         }
     }
     waitThreadsWorkDone();
-    
 }
 
 bool WorldMap::createUnitWorldBlock(BlockPosition pos)
@@ -46,6 +53,62 @@ bool WorldMap::createUnitWorldBlock(BlockPosition pos)
     auto end = GetTickCount();
     std:: cout << "world block generate time: "<< end-start << "ms"<<std::endl;
     return true;
+}
+
+void WorldMap::PutBlock(Vector3& ori, Vector3& dir, BlockResourceManager::BlockType type)
+{
+    Block* empty = nullptr;
+    Block* entity = nullptr;
+    FindPickBlock(ori,dir,empty, entity);
+    if (empty!=nullptr)
+    {
+        empty->isEmpty = false;
+        empty->adjacent2OuterAir = true;
+    }
+}
+
+void WorldMap::DeleteBlock(Vector3& ori, Vector3& dir)
+{
+    Block* empty = nullptr;
+    Block* entity = nullptr;
+    FindPickBlock(ori,dir,empty, entity);
+    if (entity!=nullptr)
+    {
+        entity->isEmpty = true;
+        entity->adjacent2OuterAir = false;
+    }
+}
+
+void WorldMap::FindPickBlock(Vector3& ori, Vector3& dir, Block*& empty, Block*& entity)
+{
+    minEntityDis = INT_MAX;
+    for (auto worldBlock : BlocksNeedRender)
+    {
+        worldBlock->FindPickBlock(ori, dir, empty, entity);
+    }
+
+    WorldBlock* worldBlock = worldMap->at(BlockPosition{entityBlockX, entityBlockY});
+    auto siblings = worldBlock->getSiblingBlocks(entityX,entityY, entityZ);
+
+    Block& block = worldBlock->blocks[entityX][entityY][entityZ];
+
+    if (block.isEdgeBlock)
+    {
+       std::cout <<"isEdgeBlock!!!!"<<std::endl;
+    }
+    float t;
+    float minT = INT_MAX;
+    for (auto sibling : siblings)
+    {
+        if (sibling && sibling->isEmpty && WorldBlock::Intersect(ori,dir,sibling->axisAlignedBox, t))
+        {
+            if (t < minT && t < minEntityDis)
+            {
+                minT = t;
+                empty = sibling;
+            }
+        }
+    }
 }
 
 void WorldMap::updateBlockNeedRender(Vector3 position)
