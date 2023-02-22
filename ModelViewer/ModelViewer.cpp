@@ -11,6 +11,7 @@
 // Author:  James Stanard
 //
 
+#include <complex>
 #include <iostream>
 
 #include "GameCore.h"
@@ -265,12 +266,12 @@ void ModelViewer::Update(float deltaT)
     m_CameraController->Update(deltaT);
 
     Vector3 ori = m_Camera.GetPosition();
-    Vector3 dir = m_Camera.GetForwardVec();
-    if (GameInput::IsFirstReleased(GameInput::kKey_c))
+    Vector3 dir = Normalize(m_Camera.GetForwardVec());
+    if (GameInput::IsFirstReleased(GameInput::kMouse0))
     {
         worldMap->DeleteBlock(ori,dir);
     }
-    if (GameInput::IsFirstReleased(GameInput::kKey_v))
+    if (GameInput::IsFirstReleased(GameInput::kMouse1))
     {
         worldMap->PutBlock(ori,dir, Grass);
     }

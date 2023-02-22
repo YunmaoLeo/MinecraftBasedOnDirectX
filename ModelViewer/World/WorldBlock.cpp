@@ -223,6 +223,7 @@ bool WorldBlock::FindPickBlockInRange(int minX, int maxX, int minY, int maxY, in
                                       Vector3 dir, Block*& empty, Block*& entity)
 {
     float t;
+    bool result = false;
     for (int x = minX; x <= maxX; x++)
     {
         for (int y = minY; y <= maxY; y++)
@@ -245,12 +246,12 @@ bool WorldBlock::FindPickBlockInRange(int minX, int maxX, int minY, int maxY, in
                         WorldMap::entityBlockX = posX;
                         WorldMap::entityBlockY = posY;
                     }
-                    return true;
+                    result = true;
                 }
             }
         }
     }
-    return false;
+    return result;
 }
 
 bool WorldBlock::FindPickBlockInOctree(OctreeNode* node, Vector3& ori, Vector3& dir, Block*& empty, Block*& entity)
