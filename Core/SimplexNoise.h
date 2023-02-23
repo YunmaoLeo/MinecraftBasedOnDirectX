@@ -2,18 +2,30 @@
 
 #include <cstddef>  // size_t
 
+#include "Math/Random.h"
+
+static Math::RandomNumberGenerator random;
 /**
  * @brief A Perlin Simplex Noise C++ Implementation (1D, 2D, 3D, 4D).
  */
 class SimplexNoise {
 public:
-    static void generatePerm(int seed);
+
+    int32_t fastfloor(float fp);
+    int32_t fastfloor(float fp) const;
+    static int seed;
+    static void setSeed(int num);
+    uint8_t hash(int32_t i) const;
+    uint8_t hash(int32_t i);
+    float grad(int32_t hash, float x) const;
+    float grad(int32_t hash, float x, float y) const;
+    float grad(int32_t hash, float x, float y, float z) const;
     // 1D Perlin simplex noise
-    static float noise(float x);
+    float noise(float x) const;
     // 2D Perlin simplex noise
-    static float noise(float x, float y);
+    float noise(float x, float y) const;
     // 3D Perlin simplex noise
-    static float noise(float x, float y, float z);
+    float noise(float x, float y, float z) const;
 
     // Fractal/Fractional Brownian Motion (fBm) noise summation
     float fractal(size_t octaves, float x) const;
@@ -28,7 +40,7 @@ public:
      * @param[in] lacunarity   Lacunarity specifies the frequency multiplier between successive octaves (default to 2.0).
      * @param[in] persistence  Persistence is the loss of amplitude between successive octaves (usually 1/lacunarity)
      */
-    explicit SimplexNoise(float frequency = 1.0f,
+    SimplexNoise(float frequency = 1.0f,
                           float amplitude = 1.0f,
                           float lacunarity = 2.0f,
                           float persistence = 0.5f) :
@@ -36,6 +48,10 @@ public:
         mAmplitude(amplitude),
         mLacunarity(lacunarity),
         mPersistence(persistence) {
+        for (auto& m_perm : perm)
+        {
+            m_perm = random.NextInt(255);
+        }
     }
 
 private:
@@ -44,4 +60,5 @@ private:
     float mAmplitude;   ///< Amplitude ("height") of the first octave of noise (default to 1.0)
     float mLacunarity;  ///< Lacunarity specifies the frequency multiplier between successive octaves (default to 2.0).
     float mPersistence; ///< Persistence is the loss of amplitude between successive octaves (usually 1/lacunarity)
+    uint8_t perm[256];
 };

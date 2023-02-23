@@ -38,6 +38,8 @@ namespace BlockResourceManager
         RedStoneLamp,
         Torch,
         TBall,
+        Sand,
+        SnowGrass,
         BlocksCount,
     };
 

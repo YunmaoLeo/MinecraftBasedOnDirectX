@@ -19,15 +19,17 @@ BoolVar EnableOctree("Octree/EnableOctree", true);
 BoolVar EnableContainTest("Octree/EnableContainTest", true);
 BoolVar EnableOctreeCompute("Octree/ComputeOptimize", false);
 
+SimplexNoise continent(0.02, 0.6, 2, 0.5);
+SimplexNoise erosion(0.15, 0.7, 2, 0.5);
+SimplexNoise peaksValleys(0.6, 1, 2, 0.5);
+SimplexNoise temperature(0.01, 1, 2, 0.5);
+SimplexNoise humidity(0.01, 1, 2, 0.5);
 
 void WorldBlock::RandomlyGenerateBlocks()
 {
     constexpr int SEA_HEIGHT = 30;
     constexpr int SURFACE_HEIGHT = 20;
     //PerlinNoise noise = PerlinNoise(9);
-    SimplexNoise continent(0.02, 0.6, 2, 0.5);
-    SimplexNoise erosion(0.15, 0.7, 2, 0.5);
-    SimplexNoise peaksValleys(0.6, 0.5, 2, 0.5);
     RandomNumberGenerator generator;
     generator.SetSeed(1);
     for (int x = 0; x < worldBlockSize; x++)
@@ -37,26 +39,32 @@ void WorldBlock::RandomlyGenerateBlocks()
             //float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001,float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001, 0.8
             //double height = noise.noise((float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001)*0.001,(float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001)*0.001, 0.8);
             double step = 0.0006;
-            double cont = continent.fractal(3, (float(originPoint.GetX()) + (x + 0.5f) * UnitBlockSize * 1.001) * step,
-                                          (float(originPoint.GetY()) + (y + 0.5f) * UnitBlockSize * 1.001) * step);
-            double ero = erosion.fractal(3, (float(originPoint.GetX()) + (x + 0.5f) * UnitBlockSize * 1.001) * step,
+            double cont = continent.fractal(4, (float(originPoint.GetX()) + (x + 0.5f) * UnitBlockSize * 1.001) * step,
                                             (float(originPoint.GetY()) + (y + 0.5f) * UnitBlockSize * 1.001) * step);
+            double ero = erosion.fractal(5, (float(originPoint.GetX()) + (x + 0.5f) * UnitBlockSize * 1.001) * step,
+                                         (float(originPoint.GetY()) + (y + 0.5f) * UnitBlockSize * 1.001) * step);
             double pea = peaksValleys.fractal(
+                4, (float(originPoint.GetX()) + (x + 0.5f) * UnitBlockSize * 1.001) * step,
+                (float(originPoint.GetY()) + (y + 0.5f) * UnitBlockSize * 1.001) * step);
+            double hum = humidity.fractal(
+                4, (float(originPoint.GetX()) + (x + 0.5f) * UnitBlockSize * 1.001) * step,
+                (float(originPoint.GetY()) + (y + 0.5f) * UnitBlockSize * 1.001) * step);
+            double temp = humidity.fractal(
                 4, (float(originPoint.GetX()) + (x + 0.5f) * UnitBlockSize * 1.001) * step,
                 (float(originPoint.GetY()) + (y + 0.5f) * UnitBlockSize * 1.001) * step);
             // double hill = hillNoise.fractal(5, (float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001)*0.0005,(float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001)*0.0005);
 
-            float value = SURFACE_HEIGHT +5 + (worldBlockDepth-SURFACE_HEIGHT)*0.3*(cont+1)/2;
+            float value = SURFACE_HEIGHT + 5 + (worldBlockDepth - SURFACE_HEIGHT) * 0.3 * (cont + 1) / 2;
             if (ero > 0)
             {
-                value -= (ero)/1 * (worldBlockDepth-SURFACE_HEIGHT)*0.2;
+                value -= (ero) / 1 * (worldBlockDepth - SURFACE_HEIGHT) * 0.2;
             }
             if (ero < 0)
             {
-                value -= (ero*ero)/1 * (worldBlockDepth-SURFACE_HEIGHT)*0.05;
+                value -= (ero * ero) / 1 * (worldBlockDepth - SURFACE_HEIGHT) * 0.05;
             }
-            
-            value += pea * (worldBlockDepth-SURFACE_HEIGHT) * 0.05;
+
+            value += pea * (worldBlockDepth - SURFACE_HEIGHT) * 0.1;
 
 
             int realHeight = value;
@@ -64,7 +72,7 @@ void WorldBlock::RandomlyGenerateBlocks()
             if (realHeight < 0) realHeight = 0;
             for (int z = 0; z < this->worldBlockDepth - 1; z++)
             {
-                if (z >= realHeight && z> SEA_HEIGHT)
+                if (z >= realHeight && z > SEA_HEIGHT)
                 {
                     Vector3 pointPos = originPoint + Vector3(x + 0.5f, y + 0.5f, z + 0.5f) * UnitBlockSize * 1.001;
                     pointPos = Vector3(pointPos.GetX(), pointPos.GetZ(), pointPos.GetY());
@@ -74,23 +82,49 @@ void WorldBlock::RandomlyGenerateBlocks()
                 BlockType type;
 
                 type = Stone;
-                
-                if (z == realHeight -1)
+
+                if (z == realHeight - 1)
                 {
-                    type = Grass;
+                    if (hum<-0.5)
+                    {
+                        type = Sand;
+                    }
+                    else
+                    {
+                        if (temp < 0.2)
+                        {
+                            type = SnowGrass;
+                        }
+                        else
+                        {
+                            type = Grass;
+                        }
+                    }
+
                 }
 
-                if (z < realHeight-1 && z> realHeight - (4+generator.NextInt(5)))
+                if (z < realHeight - 1 && z > realHeight - (4 + generator.NextInt(5)))
                 {
-                    type = Dirt;
+                    if (hum < -0.5)
+                    {
+                        type = Sand;
+                    }
+                    else
+                    {
+                        type = Dirt;
+                    }
+
                 }
 
                 if (z > SURFACE_HEIGHT && z <= SEA_HEIGHT)
                 {
-                    type = Water;
+                    {
+                        type = Water;
+                    }
+
                 }
 
-                
+
                 Vector3 pointPos = originPoint + Vector3(x + 0.5f, y + 0.5f, z + 0.5f) * UnitBlockSize * 1.001;
                 pointPos = Vector3(pointPos.GetX(), pointPos.GetZ(), pointPos.GetY());
                 blocks[x][y][z] = Block(pointPos, BlockResourceManager::BlockType(type), UnitBlockSize, false);
@@ -281,7 +315,7 @@ std::vector<Block*> WorldBlock::getSiblingBlocks(int x, int y, int z)
 {
     std::vector<Block*> result;
     Block& block = blocks[x][y][z];
-    if (x!=0)
+    if (x != 0)
     {
         result.push_back(&blocks[x - 1][y][z]);
     }
@@ -289,7 +323,7 @@ std::vector<Block*> WorldBlock::getSiblingBlocks(int x, int y, int z)
     {
         result.push_back(nullptr);
     }
-    if (x!=worldBlockSize-1)
+    if (x != worldBlockSize - 1)
     {
         result.push_back(&blocks[x + 1][y][z]);
     }
@@ -297,7 +331,7 @@ std::vector<Block*> WorldBlock::getSiblingBlocks(int x, int y, int z)
     {
         result.push_back(nullptr);
     }
-    if (y!=worldBlockSize-1)
+    if (y != worldBlockSize - 1)
     {
         result.push_back(&blocks[x][y + 1][z]);
     }
@@ -305,7 +339,7 @@ std::vector<Block*> WorldBlock::getSiblingBlocks(int x, int y, int z)
     {
         result.push_back(nullptr);
     }
-    if (y!=0)
+    if (y != 0)
     {
         result.push_back(&blocks[x][y - 1][z]);
     }
@@ -313,7 +347,7 @@ std::vector<Block*> WorldBlock::getSiblingBlocks(int x, int y, int z)
     {
         result.push_back(nullptr);
     }
-    if (z!=0)
+    if (z != 0)
     {
         result.push_back(&blocks[x][y][z - 1]);
     }
@@ -321,7 +355,7 @@ std::vector<Block*> WorldBlock::getSiblingBlocks(int x, int y, int z)
     {
         result.push_back(nullptr);
     }
-    if (z!=worldBlockDepth-1)
+    if (z != worldBlockDepth - 1)
     {
         result.push_back(&blocks[x][y][z + 1]);
     }
@@ -374,7 +408,7 @@ std::vector<Block*> WorldBlock::getSiblingBlocks(int x, int y, int z)
             }
             else
             {
-                result[2]=nullptr;
+                result[2] = nullptr;
             }
         }
     }

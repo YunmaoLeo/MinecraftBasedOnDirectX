@@ -20,6 +20,8 @@ namespace BlockResourceManager
         {Stone, "stone"},
         {Torch, "torch"},
         {Wood, "wood"},
+        {Sand, "sand"},
+        {SnowGrass, "grass_snow"}
     };
     std::unordered_map<BlockType, ModelInstance> m_BlockMap;
     std::unordered_map<BlockType, InstancesManager> BlocksInstancesManagerMap;
@@ -85,10 +87,10 @@ void BlockResourceManager::initBlocks()
         m_BlockMap[type] = model.m_Model;
 
         BlocksInstancesManagerMap[type] = InstancesManager();
-        if (type != Dirt && type !=Grass && type!=Stone && type!=Water)
-        {
-            BlocksInstancesManagerMap[type].MAX_BLOCK_NUMBER/=10;
-        }
+        // if (type != Dirt && type !=Grass && type!=Stone && type!=Water)
+        // {
+        //     BlocksInstancesManagerMap[type].MAX_BLOCK_NUMBER/=10;
+        // }
         BlocksInstancesManagerMap[type].initManager();
         ASSERT_SUCCEEDED(BlocksInstancesManagerMap.size()==BlockType::BlocksCount);
     }

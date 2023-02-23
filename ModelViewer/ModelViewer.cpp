@@ -188,7 +188,7 @@ void ModelViewer::PickItem(int sx, int sy)
 void ModelViewer::Startup(void)
 {
     // 初始化动态模糊
-    SimplexNoise::generatePerm(1);
+    SimplexNoise::setSeed(1);
     MotionBlur::Enable = true;
 
     TemporalEffects::EnableTAA = true;
