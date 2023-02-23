@@ -62,8 +62,9 @@ void WorldMap::PutBlock(Vector3& ori, Vector3& dir, BlockResourceManager::BlockT
     FindPickBlock(ori,dir,empty, entity);
     if (empty!=nullptr)
     {
+        empty->blockType = type;
         empty->isEmpty = false;
-        empty->adjacent2OuterAir = true;
+        empty->adjacent2Air = true;
     }
 }
 
@@ -75,7 +76,17 @@ void WorldMap::DeleteBlock(Vector3& ori, Vector3& dir)
     if (entity!=nullptr)
     {
         entity->isEmpty = true;
-        entity->adjacent2OuterAir = false;
+        entity->adjacent2Air = false;
+
+        WorldBlock* worldBlock = worldMap->at(BlockPosition{entityBlockX, entityBlockY});
+        auto siblings = worldBlock->getSiblingBlocks(entityX,entityY, entityZ);
+        for (auto sibling:siblings)
+        {
+            if (sibling && !sibling->isEmpty)
+            {
+                sibling->adjacent2Air = true;
+            }
+        }
     }
 }
 
@@ -89,13 +100,7 @@ void WorldMap::FindPickBlock(Vector3& ori, Vector3& dir, Block*& empty, Block*& 
 
     WorldBlock* worldBlock = worldMap->at(BlockPosition{entityBlockX, entityBlockY});
     auto siblings = worldBlock->getSiblingBlocks(entityX,entityY, entityZ);
-
-    Block& block = worldBlock->blocks[entityX][entityY][entityZ];
-
-    if (block.isEdgeBlock)
-    {
-       std::cout <<"isEdgeBlock!!!!"<<std::endl;
-    }
+    
     float t;
     float minT = INT_MAX;
     for (auto sibling : siblings)

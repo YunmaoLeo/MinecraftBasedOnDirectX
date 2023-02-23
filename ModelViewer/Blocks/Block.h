@@ -35,7 +35,7 @@ public:
     bool hasCheckSibling = false;
     bool isEdgeBlock = false;
     bool transparent = false;
-    bool adjacent2OuterAir = false;
+    bool adjacent2Air = false;
     Math::Vector3 position;
     BlockResourceManager::BlockType blockType;
     // Math::BoundingSphere boundingSphere;

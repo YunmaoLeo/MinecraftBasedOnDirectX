@@ -230,7 +230,7 @@ bool WorldBlock::FindPickBlockInRange(int minX, int maxX, int minY, int maxY, in
         {
             for (int z = minZ; z <= maxZ; z++)
             {
-                if (blocks[x][y][z].IsNull() || !blocks[x][y][z].adjacent2OuterAir)
+                if (blocks[x][y][z].IsNull() || !blocks[x][y][z].adjacent2Air)
                 {
                     continue;
                 }
@@ -438,27 +438,27 @@ void WorldBlock::SearchBlocksAdjacent2OuterAir()
     //     }
     // }
 
-    for (int x = 0; x < worldBlockSize; x++)
-    {
-        for (int y = 0; y < worldBlockSize; y++)
-        {
-            // blocks[x][y][0].adjacent2OuterAir = true;
-            blocks[x][y][worldBlockDepth - 1].adjacent2OuterAir = true;
-        }
-    }
+    // for (int x = 0; x < worldBlockSize; x++)
+    // {
+    //     for (int y = 0; y < worldBlockSize; y++)
+    //     {
+    //         // blocks[x][y][0].adjacent2OuterAir = true;
+    //         blocks[x][y][worldBlockDepth - 1].adjacent2Air = true;
+    //     }
+    // }
     for (int x = 0; x < worldBlockSize; x++)
     {
         for (int y = 0; y < worldBlockSize; y++)
         {
             for (int z = worldBlockDepth - 1; z >= 0; z--)
             {
-                if (blocks[x][y][z].IsNull() && blocks[x][y][z].adjacent2OuterAir)
+                if (blocks[x][y][z].IsNull())
                 {
                     SpreadAdjacent2OuterAir(x + 1, y, z, blocksStatus);
                     SpreadAdjacent2OuterAir(x - 1, y, z, blocksStatus);
                     SpreadAdjacent2OuterAir(x, y + 1, z, blocksStatus);
                     SpreadAdjacent2OuterAir(x, y - 1, z, blocksStatus);
-                    // SpreadAdjacent2OuterAir(x, y, z + 1, blocksStatus);
+                    SpreadAdjacent2OuterAir(x, y, z + 1, blocksStatus);
                     SpreadAdjacent2OuterAir(x, y, z - 1, blocksStatus);
                 }
             }
@@ -524,7 +524,7 @@ void WorldBlock::RenderBlocksInRangeNoIntersectCheck(int minX, int maxX, int min
 bool WorldBlock::isAdjacent2OuterAir(int x, int y, int z)
 {
     Block& block = blocks[x][y][z];
-    if (block.adjacent2OuterAir)
+    if (block.adjacent2Air)
     {
         return true;
     }
@@ -538,7 +538,7 @@ bool WorldBlock::isAdjacent2OuterAir(int x, int y, int z)
             {
                 WorldBlock* block = worldMap->getWorldBlockRef(posX - 1, posY);
                 Block& siblingBlock = block->blocks[worldBlockSize - 1][y][z];
-                if (siblingBlock.adjacent2OuterAir && siblingBlock.IsNull())
+                if (siblingBlock.adjacent2Air && siblingBlock.IsNull())
                 {
                     hasSiblingVisibleAir = true;
                 }
@@ -551,7 +551,7 @@ bool WorldBlock::isAdjacent2OuterAir(int x, int y, int z)
             {
                 WorldBlock* block = worldMap->getWorldBlockRef(posX, posY - 1);
                 Block& siblingBlock = block->blocks[x][worldBlockSize - 1][z];
-                if (siblingBlock.adjacent2OuterAir && siblingBlock.IsNull())
+                if (siblingBlock.adjacent2Air && siblingBlock.IsNull())
                 {
                     hasSiblingVisibleAir = true;
                 }
@@ -564,7 +564,7 @@ bool WorldBlock::isAdjacent2OuterAir(int x, int y, int z)
             {
                 WorldBlock* block = worldMap->getWorldBlockRef(posX + 1, posY);
                 Block& siblingBlock = block->blocks[0][y][z];
-                if (siblingBlock.adjacent2OuterAir && siblingBlock.IsNull())
+                if (siblingBlock.adjacent2Air && siblingBlock.IsNull())
                 {
                     hasSiblingVisibleAir = true;
                 }
@@ -577,7 +577,7 @@ bool WorldBlock::isAdjacent2OuterAir(int x, int y, int z)
             {
                 WorldBlock* block = worldMap->getWorldBlockRef(posX, posY + 1);
                 Block& siblingBlock = block->blocks[x][0][z];
-                if (siblingBlock.adjacent2OuterAir && siblingBlock.IsNull())
+                if (siblingBlock.adjacent2Air && siblingBlock.IsNull())
                 {
                     hasSiblingVisibleAir = true;
                 }
@@ -588,7 +588,7 @@ bool WorldBlock::isAdjacent2OuterAir(int x, int y, int z)
 
     if (hasSiblingVisibleAir)
     {
-        block.adjacent2OuterAir = true;
+        block.adjacent2Air = true;
         return true;
     }
     return false;
@@ -768,7 +768,7 @@ bool WorldBlock::Render(const Camera& camera, GraphicsContext& context)
                 {
                     Block& block = blocks[x][y][z];
                     if (!block.IsNull()
-                        && block.adjacent2OuterAir
+                        && block.adjacent2Air
                         //&& camera.GetWorldSpaceFrustum().IntersectBoundingBox(block.axisAlignedBox)
                     )
                     {
@@ -808,7 +808,7 @@ void WorldBlock::SpreadAdjacent2OuterAir(int x, int y, int z, std::vector<std::v
         return;
     }
 
-    blocks[x][y][z].adjacent2OuterAir = true;
+    blocks[x][y][z].adjacent2Air = true;
 
 
     blockStatus[x][y][z] = 1;
