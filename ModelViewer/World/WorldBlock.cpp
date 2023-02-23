@@ -25,9 +25,9 @@ void WorldBlock::RandomlyGenerateBlocks()
     constexpr int SEA_HEIGHT = 30;
     constexpr int SURFACE_HEIGHT = 20;
     //PerlinNoise noise = PerlinNoise(9);
-    SimplexNoise lowNoise(0.8, 1, 0.4, 0.5);
-    SimplexNoise highNoise(0.2, 1, 0.5, 0.5);
-    SimplexNoise blendNoise(0.48, 1, 0.5, 0.3);
+    SimplexNoise continent(0.02, 0.6, 2, 0.5);
+    SimplexNoise erosion(0.15, 0.7, 2, 0.5);
+    SimplexNoise peaksValleys(0.6, 0.5, 2, 0.5);
     RandomNumberGenerator generator;
     generator.SetSeed(1);
     for (int x = 0; x < worldBlockSize; x++)
@@ -37,37 +37,34 @@ void WorldBlock::RandomlyGenerateBlocks()
             //float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001,float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001, 0.8
             //double height = noise.noise((float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001)*0.001,(float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001)*0.001, 0.8);
             double step = 0.0006;
-            double low = lowNoise.fractal(4, (float(originPoint.GetX()) + (x + 0.5f) * UnitBlockSize * 1.001) * step,
+            double cont = continent.fractal(3, (float(originPoint.GetX()) + (x + 0.5f) * UnitBlockSize * 1.001) * step,
                                           (float(originPoint.GetY()) + (y + 0.5f) * UnitBlockSize * 1.001) * step);
-            double high = highNoise.fractal(4, (float(originPoint.GetX()) + (x + 0.5f) * UnitBlockSize * 1.001) * step,
+            double ero = erosion.fractal(3, (float(originPoint.GetX()) + (x + 0.5f) * UnitBlockSize * 1.001) * step,
                                             (float(originPoint.GetY()) + (y + 0.5f) * UnitBlockSize * 1.001) * step);
-            double blend = blendNoise.fractal(
+            double pea = peaksValleys.fractal(
                 4, (float(originPoint.GetX()) + (x + 0.5f) * UnitBlockSize * 1.001) * step,
                 (float(originPoint.GetY()) + (y + 0.5f) * UnitBlockSize * 1.001) * step);
             // double hill = hillNoise.fractal(5, (float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001)*0.0005,(float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001)*0.0005);
 
+            float value = SURFACE_HEIGHT +5 + (worldBlockDepth-SURFACE_HEIGHT)*0.3*(cont+1)/2;
+            if (ero > 0)
+            {
+                value -= (ero)/1 * (worldBlockDepth-SURFACE_HEIGHT)*0.2;
+            }
+            if (ero < 0)
+            {
+                value -= (ero*ero)/1 * (worldBlockDepth-SURFACE_HEIGHT)*0.05;
+            }
+            
+            value += pea * (worldBlockDepth-SURFACE_HEIGHT) * 0.05;
 
-            low /= 16;
-            //hill /= 2;
-            blend += 1;
 
-            // if (blend > 1.5)
-            // {
-            //     blend *= ((2-blend)/2 + 1);
-            // }
-
-            double value = ((blend) * high + (2 - blend) * low) / 2;
-            // if (blend < 0.3)
-            // {
-            //     value = ((blend+0.07) * high - (2-blend-0.07) * low)/2;
-            // }
-
-            int realHeight = SURFACE_HEIGHT + (worldBlockDepth - SURFACE_HEIGHT)*0.9 * (value + 1) / 2;
+            int realHeight = value;
             if (realHeight >= this->worldBlockDepth) realHeight = this->worldBlockDepth - 1;
             if (realHeight < 0) realHeight = 0;
             for (int z = 0; z < this->worldBlockDepth - 1; z++)
             {
-                if (z >= realHeight && z>= SEA_HEIGHT)
+                if (z >= realHeight && z> SEA_HEIGHT)
                 {
                     Vector3 pointPos = originPoint + Vector3(x + 0.5f, y + 0.5f, z + 0.5f) * UnitBlockSize * 1.001;
                     pointPos = Vector3(pointPos.GetX(), pointPos.GetZ(), pointPos.GetY());
@@ -77,10 +74,22 @@ void WorldBlock::RandomlyGenerateBlocks()
                 BlockType type;
 
                 type = Stone;
+                
+                if (z == realHeight -1)
+                {
+                    type = Grass;
+                }
+
+                if (z < realHeight-1 && z> realHeight - (4+generator.NextInt(5)))
+                {
+                    type = Dirt;
+                }
+
                 if (z > SURFACE_HEIGHT && z <= SEA_HEIGHT)
                 {
                     type = Water;
                 }
+
                 
                 Vector3 pointPos = originPoint + Vector3(x + 0.5f, y + 0.5f, z + 0.5f) * UnitBlockSize * 1.001;
                 pointPos = Vector3(pointPos.GetX(), pointPos.GetZ(), pointPos.GetY());
