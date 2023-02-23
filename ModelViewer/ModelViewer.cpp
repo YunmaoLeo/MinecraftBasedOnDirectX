@@ -36,6 +36,7 @@
 #include "ShadowCamera.h"
 #include "Display.h"
 #include "LightManager.h"
+#include "SimplexNoise.h"
 #include "ThreadPool.h"
 #include "Blocks/BlockResourceManager.h"
 #include "World/WorldMap.h"
@@ -187,6 +188,7 @@ void ModelViewer::PickItem(int sx, int sy)
 void ModelViewer::Startup(void)
 {
     // 初始化动态模糊
+    SimplexNoise::generatePerm(1);
     MotionBlur::Enable = true;
 
     TemporalEffects::EnableTAA = true;
