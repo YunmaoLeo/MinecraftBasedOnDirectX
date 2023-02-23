@@ -76,7 +76,7 @@ public:
     Math::Vector3 originPoint;
     OctreeNode* octreeNode;
     uint16_t worldBlockSize = 16;
-    uint16_t worldBlockDepth = 64;
+    uint16_t worldBlockDepth = 200;
     std::vector<std::vector<std::vector<Block>>> blocks{};
     WorldMap* worldMap;
     int posX;
