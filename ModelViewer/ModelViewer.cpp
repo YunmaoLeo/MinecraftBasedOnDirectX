@@ -41,7 +41,7 @@
 #include "Blocks/BlockResourceManager.h"
 #include "World/WorldMap.h"
 #include "World/World.h"
-#include "World/WorldBlock.h"
+#include "World/Chunk.h"
 
 #define LEGACY_RENDERER
 
@@ -81,7 +81,7 @@ private:
     D3D12_RECT subScissor;
 
     ModelInstance m_ModelInst;
-    WorldBlock world_block;
+    Chunk world_block;
     WorldMap* worldMap;
     ShadowCamera m_SunShadow;
 };
@@ -170,7 +170,7 @@ void LoadIBLTextures()
         g_IBLSet.Increment();
 }
 
-int WorldBlock::blockId = 0;
+int Chunk::blockId = 0;
 
 void ModelViewer::PickItem(int sx, int sy)
 {

@@ -1,4 +1,4 @@
-﻿#include "WorldBlock.h"
+﻿#include "Chunk.h"
 
 #include <stdbool.h>
 
@@ -19,138 +19,54 @@ BoolVar EnableOctree("Octree/EnableOctree", true);
 BoolVar EnableContainTest("Octree/EnableContainTest", true);
 BoolVar EnableOctreeCompute("Octree/ComputeOptimize", false);
 
-SimplexNoise continent(0.02, 0.6, 2, 0.5);
-SimplexNoise erosion(0.15, 0.7, 2, 0.5);
-SimplexNoise peaksValleys(0.6, 1, 2, 0.5);
-SimplexNoise temperature(0.01, 1, 2, 0.5);
-SimplexNoise humidity(0.01, 1, 2, 0.5);
 
-void WorldBlock::RandomlyGenerateBlocks()
+void Chunk::RandomlyGenerateBlocks()
 {
-    constexpr int SEA_HEIGHT = 30;
-    constexpr int SURFACE_HEIGHT = 20;
     //PerlinNoise noise = PerlinNoise(9);
     RandomNumberGenerator generator;
     generator.SetSeed(1);
-    for (int x = 0; x < worldBlockSize; x++)
+    for (int x = 0; x < chunkSize; x++)
     {
-        for (int y = 0; y < worldBlockSize; y++)
+        for (int y = 0; y < chunkSize; y++)
         {
-            //float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001,float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001, 0.8
-            //double height = noise.noise((float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001)*0.001,(float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001)*0.001, 0.8);
-            double step = 0.0006;
-            double cont = continent.fractal(4, (float(originPoint.GetX()) + (x + 0.5f) * UnitBlockSize * 1.001) * step,
-                                            (float(originPoint.GetY()) + (y + 0.5f) * UnitBlockSize * 1.001) * step);
-            double ero = erosion.fractal(5, (float(originPoint.GetX()) + (x + 0.5f) * UnitBlockSize * 1.001) * step,
-                                         (float(originPoint.GetY()) + (y + 0.5f) * UnitBlockSize * 1.001) * step);
-            double pea = peaksValleys.fractal(
-                4, (float(originPoint.GetX()) + (x + 0.5f) * UnitBlockSize * 1.001) * step,
-                (float(originPoint.GetY()) + (y + 0.5f) * UnitBlockSize * 1.001) * step);
-            double hum = humidity.fractal(
-                4, (float(originPoint.GetX()) + (x + 0.5f) * UnitBlockSize * 1.001) * step,
-                (float(originPoint.GetY()) + (y + 0.5f) * UnitBlockSize * 1.001) * step);
-            double temp = humidity.fractal(
-                4, (float(originPoint.GetX()) + (x + 0.5f) * UnitBlockSize * 1.001) * step,
-                (float(originPoint.GetY()) + (y + 0.5f) * UnitBlockSize * 1.001) * step);
-            // double hill = hillNoise.fractal(5, (float(originPoint.GetX())+(x+0.5f)*UnitBlockSize*1.001)*0.0005,(float(originPoint.GetY())+(y+0.5f)*UnitBlockSize*1.001)*0.0005);
+            float xCoor = (float(originPoint.GetX()) + (x + 0.5f) * UnitBlockSize * 1.001) * WorldGenerator::COOR_STEP;
+            float yCoor = (float(originPoint.GetY()) + (y + 0.5f) * UnitBlockSize * 1.001) *WorldGenerator::COOR_STEP;
 
-            float value = SURFACE_HEIGHT + 5 + (worldBlockDepth - SURFACE_HEIGHT) * 0.3 * (cont + 1) / 2;
-            if (ero > 0)
+            int realHeight = WorldGenerator::getRealHeight(xCoor, yCoor);
+            WorldGenerator::Biomes biomes = WorldGenerator::getBiomes(xCoor, yCoor);
+
+            for (int z = 0; z < this->chunkDepth - 1; z++)
             {
-                value -= (ero) / 1 * (worldBlockDepth - SURFACE_HEIGHT) * 0.2;
-            }
-            if (ero < 0)
-            {
-                value -= (ero * ero) / 1 * (worldBlockDepth - SURFACE_HEIGHT) * 0.05;
-            }
-
-            value += pea * (worldBlockDepth - SURFACE_HEIGHT) * 0.1;
-
-
-            int realHeight = value;
-            if (realHeight >= this->worldBlockDepth) realHeight = this->worldBlockDepth - 1;
-            if (realHeight < 0) realHeight = 0;
-            for (int z = 0; z < this->worldBlockDepth - 1; z++)
-            {
-                if (z >= realHeight && z > SEA_HEIGHT)
-                {
-                    Vector3 pointPos = originPoint + Vector3(x + 0.5f, y + 0.5f, z + 0.5f) * UnitBlockSize * 1.001;
-                    pointPos = Vector3(pointPos.GetX(), pointPos.GetZ(), pointPos.GetY());
-                    blocks[x][y][z] = Block(pointPos, BlockResourceManager::BlockType(0), UnitBlockSize, true);
-                    continue;
-                }
-                BlockType type;
-
-                type = Stone;
-
-                if (z == realHeight - 1)
-                {
-                    if (hum<-0.5)
-                    {
-                        type = Sand;
-                    }
-                    else
-                    {
-                        if (temp < 0.2)
-                        {
-                            type = SnowGrass;
-                        }
-                        else
-                        {
-                            type = Grass;
-                        }
-                    }
-
-                }
-
-                if (z < realHeight - 1 && z > realHeight - (4 + generator.NextInt(5)))
-                {
-                    if (hum < -0.5)
-                    {
-                        type = Sand;
-                    }
-                    else
-                    {
-                        type = Dirt;
-                    }
-
-                }
-
-                if (z > SURFACE_HEIGHT && z <= SEA_HEIGHT)
-                {
-                    {
-                        type = Water;
-                    }
-
-                }
-
-
                 Vector3 pointPos = originPoint + Vector3(x + 0.5f, y + 0.5f, z + 0.5f) * UnitBlockSize * 1.001;
                 pointPos = Vector3(pointPos.GetX(), pointPos.GetZ(), pointPos.GetY());
-                blocks[x][y][z] = Block(pointPos, BlockResourceManager::BlockType(type), UnitBlockSize, false);
+
+                auto blockType = WorldGenerator::getBlockType(xCoor, yCoor, realHeight, biomes, z);
+                bool isEmpty = (blockType == BlocksCount);
+
+                blocks[x][y][z] = Block(pointPos, blockType, UnitBlockSize, isEmpty);
             }
         }
     }
-    for (int z = 0; z < worldBlockDepth; z++)
+    for (int z = 0; z < chunkDepth; z++)
     {
-        for (int y = 0; y < worldBlockSize; y++)
+        for (int y = 0; y < chunkSize; y++)
         {
             blocks[0][y][z].isEdgeBlock = true;
-            blocks[worldBlockSize - 1][y][z].isEdgeBlock = true;
+            blocks[chunkSize - 1][y][z].isEdgeBlock = true;
         }
     }
 
-    for (int z = 0; z < worldBlockDepth; z++)
+    for (int z = 0; z < chunkDepth; z++)
     {
-        for (int x = 0; x < worldBlockSize; x++)
+        for (int x = 0; x < chunkSize; x++)
         {
             blocks[x][0][z].isEdgeBlock = true;
-            blocks[x][worldBlockSize - 1][z].isEdgeBlock = true;
+            blocks[x][chunkSize - 1][z].isEdgeBlock = true;
         }
     }
 }
 
-bool WorldBlock::Intersect(const Vector3& ori, const Vector3& dir, const AxisAlignedBox& box, float& t)
+bool Chunk::Intersect(const Vector3& ori, const Vector3& dir, const AxisAlignedBox& box, float& t)
 {
     Vector3 ptOnPlane;
     Vector3 min = box.GetMin();
@@ -237,17 +153,17 @@ bool WorldBlock::Intersect(const Vector3& ori, const Vector3& dir, const AxisAli
     return false;
 }
 
-void WorldBlock::InitBlocks()
+void Chunk::InitBlocks()
 {
     RandomlyGenerateBlocks();
     SearchBlocksAdjacent2OuterAir();
     // InitOcclusionQueriesHeaps();
-    CreateOctreeNode(this->octreeNode, 0, this->worldBlockSize - 1, 0, this->worldBlockSize - 1, 0,
-                     this->worldBlockDepth - 1, 0);
+    CreateOctreeNode(this->octreeNode, 0, this->chunkSize - 1, 0, this->chunkSize - 1, 0,
+                     this->chunkDepth - 1, 0);
 }
 
 
-bool WorldBlock::FindPickBlockInRange(int minX, int maxX, int minY, int maxY, int minZ, int maxZ, Vector3 ori,
+bool Chunk::FindPickBlockInRange(int minX, int maxX, int minY, int maxY, int minZ, int maxZ, Vector3 ori,
                                       Vector3 dir, Block*& empty, Block*& entity)
 {
     float t;
@@ -282,7 +198,7 @@ bool WorldBlock::FindPickBlockInRange(int minX, int maxX, int minY, int maxY, in
     return result;
 }
 
-bool WorldBlock::FindPickBlockInOctree(OctreeNode* node, Vector3& ori, Vector3& dir, Block*& empty, Block*& entity)
+bool Chunk::FindPickBlockInOctree(OctreeNode* node, Vector3& ori, Vector3& dir, Block*& empty, Block*& entity)
 {
     float t;
     if (!Intersect(ori, dir, node->box, t))
@@ -311,7 +227,7 @@ bool WorldBlock::FindPickBlockInOctree(OctreeNode* node, Vector3& ori, Vector3& 
     return result;
 }
 
-std::vector<Block*> WorldBlock::getSiblingBlocks(int x, int y, int z)
+std::vector<Block*> Chunk::getSiblingBlocks(int x, int y, int z)
 {
     std::vector<Block*> result;
     Block& block = blocks[x][y][z];
@@ -323,7 +239,7 @@ std::vector<Block*> WorldBlock::getSiblingBlocks(int x, int y, int z)
     {
         result.push_back(nullptr);
     }
-    if (x != worldBlockSize - 1)
+    if (x != chunkSize - 1)
     {
         result.push_back(&blocks[x + 1][y][z]);
     }
@@ -331,7 +247,7 @@ std::vector<Block*> WorldBlock::getSiblingBlocks(int x, int y, int z)
     {
         result.push_back(nullptr);
     }
-    if (y != worldBlockSize - 1)
+    if (y != chunkSize - 1)
     {
         result.push_back(&blocks[x][y + 1][z]);
     }
@@ -355,7 +271,7 @@ std::vector<Block*> WorldBlock::getSiblingBlocks(int x, int y, int z)
     {
         result.push_back(nullptr);
     }
-    if (z != worldBlockDepth - 1)
+    if (z != chunkDepth - 1)
     {
         result.push_back(&blocks[x][y][z + 1]);
     }
@@ -371,14 +287,14 @@ std::vector<Block*> WorldBlock::getSiblingBlocks(int x, int y, int z)
         {
             if (worldMap->hasBlock(posX - 1, posY))
             {
-                result[0] = (&worldMap->getWorldBlockRef(posX - 1, posY)->blocks[worldBlockSize - 1][y][z]);
+                result[0] = (&worldMap->getWorldBlockRef(posX - 1, posY)->blocks[chunkSize - 1][y][z]);
             }
             else
             {
                 result[0] = nullptr;
             }
         }
-        if (x == worldBlockSize - 1)
+        if (x == chunkSize - 1)
         {
             if (worldMap->hasBlock(posX + 1, posY))
             {
@@ -393,14 +309,14 @@ std::vector<Block*> WorldBlock::getSiblingBlocks(int x, int y, int z)
         {
             if (worldMap->hasBlock(posX, posY - 1))
             {
-                result[3] = (&worldMap->getWorldBlockRef(posX, posY - 1)->blocks[x][worldBlockSize - 1][z]);
+                result[3] = (&worldMap->getWorldBlockRef(posX, posY - 1)->blocks[x][chunkSize - 1][z]);
             }
             else
             {
                 result[3] = nullptr;
             }
         }
-        if (y == worldBlockSize - 1)
+        if (y == chunkSize - 1)
         {
             if (worldMap->hasBlock(posX, posY + 1))
             {
@@ -415,18 +331,18 @@ std::vector<Block*> WorldBlock::getSiblingBlocks(int x, int y, int z)
     return result;
 }
 
-bool WorldBlock::FindPickBlock(Vector3& ori, Vector3& dir, Block*& empty, Block*& entity)
+bool Chunk::FindPickBlock(Vector3& ori, Vector3& dir, Block*& empty, Block*& entity)
 {
     return FindPickBlockInOctree(octreeNode, ori, dir, empty, entity);
 }
 
-void WorldBlock::Update(float deltaTime)
+void Chunk::Update(float deltaTime)
 {
-    for (int x = 0; x < worldBlockSize; x++)
+    for (int x = 0; x < chunkSize; x++)
     {
-        for (int y = 0; y < worldBlockSize; y++)
+        for (int y = 0; y < chunkSize; y++)
         {
-            for (int z = 0; z < worldBlockDepth; z++)
+            for (int z = 0; z < chunkDepth; z++)
             {
                 blocks[x][y][z].Update(deltaTime);
             }
@@ -434,16 +350,16 @@ void WorldBlock::Update(float deltaTime)
     }
 }
 
-int WorldBlock::GetBlockOffsetOnHeap(int x, int y, int z) const
+int Chunk::GetBlockOffsetOnHeap(int x, int y, int z) const
 {
-    return z * (worldBlockSize * worldBlockSize) + y * worldBlockSize + x;
+    return z * (chunkSize * chunkSize) + y * chunkSize + x;
 }
 
-void WorldBlock::SearchBlocksAdjacent2OuterAir()
+void Chunk::SearchBlocksAdjacent2OuterAir()
 {
-    std::vector<std::vector<std::vector<int>>> blocksStatus(worldBlockSize,
-                                                            std::vector<std::vector<int>>(worldBlockSize,
-                                                                std::vector<int>(worldBlockDepth)));
+    std::vector<std::vector<std::vector<int>>> blocksStatus(chunkSize,
+                                                            std::vector<std::vector<int>>(chunkSize,
+                                                                std::vector<int>(chunkDepth)));
 
     // Assign outermost blocks as adjacent to outer air.
     // Outermost blocks has a same attribute, one of x,y equals 0 or worldBlockSize-1
@@ -474,11 +390,11 @@ void WorldBlock::SearchBlocksAdjacent2OuterAir()
     //         blocks[x][y][worldBlockDepth - 1].adjacent2Air = true;
     //     }
     // }
-    for (int x = 0; x < worldBlockSize; x++)
+    for (int x = 0; x < chunkSize; x++)
     {
-        for (int y = 0; y < worldBlockSize; y++)
+        for (int y = 0; y < chunkSize; y++)
         {
-            for (int z = worldBlockDepth - 1; z >= 0; z--)
+            for (int z = chunkDepth - 1; z >= 0; z--)
             {
                 if (blocks[x][y][z].IsNull())
                 {
@@ -494,19 +410,19 @@ void WorldBlock::SearchBlocksAdjacent2OuterAir()
     }
 }
 
-bool WorldBlock::CheckOutOfRange(int x, int y, int z) const
+bool Chunk::CheckOutOfRange(int x, int y, int z) const
 {
-    return x < 0 || x >= worldBlockSize || y < 0 || y >= worldBlockSize || z < 0 || z >= worldBlockDepth;
+    return x < 0 || x >= chunkSize || y < 0 || y >= chunkSize || z < 0 || z >= chunkDepth;
 }
 
-void WorldBlock::RenderSingleBlock(int x, int y, int z)
+void Chunk::RenderSingleBlock(int x, int y, int z)
 {
     count++;
     Block& block = blocks[x][y][z];
     BlockResourceManager::addBlockIntoManager(block.blockType, block.position, block.radius);
 }
 
-void WorldBlock::RenderBlocksInRange(int minX, int maxX, int minY, int maxY, int minZ, int maxZ,
+void Chunk::RenderBlocksInRange(int minX, int maxX, int minY, int maxY, int minZ, int maxZ,
                                      const Camera& camera)
 {
     for (int x = minX; x <= maxX; x++)
@@ -529,7 +445,7 @@ void WorldBlock::RenderBlocksInRange(int minX, int maxX, int minY, int maxY, int
     }
 }
 
-void WorldBlock::RenderBlocksInRangeNoIntersectCheck(int minX, int maxX, int minY, int maxY, int minZ, int maxZ)
+void Chunk::RenderBlocksInRangeNoIntersectCheck(int minX, int maxX, int minY, int maxY, int minZ, int maxZ)
 {
     for (int x = minX; x <= maxX; x++)
     {
@@ -549,7 +465,7 @@ void WorldBlock::RenderBlocksInRangeNoIntersectCheck(int minX, int maxX, int min
     }
 }
 
-bool WorldBlock::isAdjacent2OuterAir(int x, int y, int z)
+bool Chunk::isAdjacent2OuterAir(int x, int y, int z)
 {
     Block& block = blocks[x][y][z];
     if (block.adjacent2Air)
@@ -564,8 +480,8 @@ bool WorldBlock::isAdjacent2OuterAir(int x, int y, int z)
         {
             if (worldMap->hasBlock(posX - 1, posY))
             {
-                WorldBlock* block = worldMap->getWorldBlockRef(posX - 1, posY);
-                Block& siblingBlock = block->blocks[worldBlockSize - 1][y][z];
+                Chunk* block = worldMap->getWorldBlockRef(posX - 1, posY);
+                Block& siblingBlock = block->blocks[chunkSize - 1][y][z];
                 if (siblingBlock.IsNull())
                 {
                     hasSiblingVisibleAir = true;
@@ -577,8 +493,8 @@ bool WorldBlock::isAdjacent2OuterAir(int x, int y, int z)
         {
             if (worldMap->hasBlock(posX, posY - 1))
             {
-                WorldBlock* block = worldMap->getWorldBlockRef(posX, posY - 1);
-                Block& siblingBlock = block->blocks[x][worldBlockSize - 1][z];
+                Chunk* block = worldMap->getWorldBlockRef(posX, posY - 1);
+                Block& siblingBlock = block->blocks[x][chunkSize - 1][z];
                 if (siblingBlock.IsNull())
                 {
                     hasSiblingVisibleAir = true;
@@ -586,11 +502,11 @@ bool WorldBlock::isAdjacent2OuterAir(int x, int y, int z)
             }
         }
 
-        if (x == worldBlockSize - 1)
+        if (x == chunkSize - 1)
         {
             if (worldMap->hasBlock(posX + 1, posY))
             {
-                WorldBlock* block = worldMap->getWorldBlockRef(posX + 1, posY);
+                Chunk* block = worldMap->getWorldBlockRef(posX + 1, posY);
                 Block& siblingBlock = block->blocks[0][y][z];
                 if (siblingBlock.IsNull())
                 {
@@ -599,11 +515,11 @@ bool WorldBlock::isAdjacent2OuterAir(int x, int y, int z)
             }
         }
 
-        if (y == worldBlockSize - 1)
+        if (y == chunkSize - 1)
         {
             if (worldMap->hasBlock(posX, posY + 1))
             {
-                WorldBlock* block = worldMap->getWorldBlockRef(posX, posY + 1);
+                Chunk* block = worldMap->getWorldBlockRef(posX, posY + 1);
                 Block& siblingBlock = block->blocks[x][0][z];
                 if (siblingBlock.IsNull())
                 {
@@ -622,7 +538,7 @@ bool WorldBlock::isAdjacent2OuterAir(int x, int y, int z)
     return false;
 }
 
-void WorldBlock::CreateOctreeNode(OctreeNode* & node, int minX, int maxX, int minY, int maxY, int minZ, int maxZ,
+void Chunk::CreateOctreeNode(OctreeNode* & node, int minX, int maxX, int minY, int maxY, int minZ, int maxZ,
                                   int depth)
 {
     if (minX >= maxX || minY >= maxY || minZ >= maxZ)
@@ -670,7 +586,7 @@ void WorldBlock::CreateOctreeNode(OctreeNode* & node, int minX, int maxX, int mi
     CreateOctreeNode(node->rightTopFront, middleX + 1, maxX, middleY + 1, maxY, middleZ + 1, maxZ, depth + 1);
 }
 
-void WorldBlock::OctreeRenderBlocks(OctreeNode* & node, const Camera& camera)
+void Chunk::OctreeRenderBlocks(OctreeNode* & node, const Camera& camera)
 {
     AxisAlignedBox box = node->box;
 
@@ -711,7 +627,7 @@ void WorldBlock::OctreeRenderBlocks(OctreeNode* & node, const Camera& camera)
     OctreeRenderBlocks(node->rightTopFront, camera);
 }
 
-void WorldBlock::OctreeRenderBlocks(int minX, int maxX, int minY, int maxY, int minZ, int maxZ, int depth,
+void Chunk::OctreeRenderBlocks(int minX, int maxX, int minY, int maxY, int minZ, int maxZ, int depth,
                                     const Camera& camera)
 {
     //check bounding box intersection
@@ -770,7 +686,7 @@ void WorldBlock::OctreeRenderBlocks(int minX, int maxX, int minY, int maxY, int 
     OctreeRenderBlocks(middleX + 1, maxX, middleY + 1, maxY, middleZ + 1, maxZ, depth + 1, camera);
 }
 
-bool WorldBlock::Render(const Camera& camera, GraphicsContext& context)
+bool Chunk::Render(const Camera& camera, GraphicsContext& context)
 {
     // blocksRenderedVector.clear();
     count = 0;
@@ -782,17 +698,17 @@ bool WorldBlock::Render(const Camera& camera, GraphicsContext& context)
         }
         else
         {
-            OctreeRenderBlocks(0, worldBlockSize - 1, 0, worldBlockSize - 1, 0, worldBlockDepth - 1, 0, camera);
+            OctreeRenderBlocks(0, chunkSize - 1, 0, chunkSize - 1, 0, chunkDepth - 1, 0, camera);
         }
     }
     else
     {
         count = 0;
-        for (int x = 0; x < worldBlockSize; x++)
+        for (int x = 0; x < chunkSize; x++)
         {
-            for (int y = 0; y < worldBlockSize; y++)
+            for (int y = 0; y < chunkSize; y++)
             {
-                for (int z = 0; z < worldBlockDepth; z++)
+                for (int z = 0; z < chunkDepth; z++)
                 {
                     Block& block = blocks[x][y][z];
                     if (!block.IsNull()
@@ -809,7 +725,7 @@ bool WorldBlock::Render(const Camera& camera, GraphicsContext& context)
     return false;
 }
 
-void WorldBlock::CleanUp()
+void Chunk::CleanUp()
 {
     for (auto blocksX : blocks)
     {
@@ -823,10 +739,10 @@ void WorldBlock::CleanUp()
     }
 }
 
-void WorldBlock::SpreadAdjacent2OuterAir(int x, int y, int z, std::vector<std::vector<std::vector<int>>>& blockStatus)
+void Chunk::SpreadAdjacent2OuterAir(int x, int y, int z, std::vector<std::vector<std::vector<int>>>& blockStatus)
 {
     // out of boundary
-    if (x < 0 || x > worldBlockSize - 1 || y < 0 || y > worldBlockSize - 1 || z < 0 || z > worldBlockDepth - 1)
+    if (x < 0 || x > chunkSize - 1 || y < 0 || y > chunkSize - 1 || z < 0 || z > chunkDepth - 1)
     {
         return;
     }

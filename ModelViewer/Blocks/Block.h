@@ -2,11 +2,11 @@
 #include "BlockResourceManager.h"
 #include "Math/Vector.h"
 
-class WorldBlock;
+class Chunk;
 
 class Block
 {
-    friend WorldBlock;
+    friend Chunk;
 
 public:
 

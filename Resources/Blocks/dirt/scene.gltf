@@ -47,8 +47,8 @@
             ],
             "scale" : [
                 0.009999999776482582,
-                0.010000000707805157,
-                0.010000000707805157
+                0.009999999776482582,
+                0.009999999776482582
             ]
         },
         {
@@ -102,8 +102,8 @@
     "images" : [
         {
             "mimeType" : "image/png",
-            "name" : "dirt",
-            "uri" : "dirt.png"
+            "name" : "lambert6_baseColor-modified",
+            "uri" : "textures/lambert6_baseColor-modified.png"
         }
     ],
     "accessors" : [

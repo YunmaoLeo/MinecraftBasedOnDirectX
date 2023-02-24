@@ -17,7 +17,7 @@ WorldMap::WorldMap(int renderAreaCount, int unitAreaSize, int threadCount)
     thread_pool = new ThreadPool(threadCount);
 
     //initialize world blocks;
-    worldMap = new std::unordered_map<BlockPosition, WorldBlock*, hashName>;
+    worldMap = new std::unordered_map<BlockPosition, Chunk*, hashName>;
     int renderCount = RenderAreaCount + 2;
     mapOriginPoint = Vector3((-0.5) * UnitAreaSize * World::UnitBlockSize,
                              (-0.5) * UnitAreaSize * World::UnitBlockSize, 0);
@@ -45,7 +45,7 @@ bool WorldMap::createUnitWorldBlock(BlockPosition pos)
     int y = pos.y;
     Vector3 originPoint = Vector3((x - 0.5) * UnitAreaSize * World::UnitBlockSize,
                                   (y - 0.5) * UnitAreaSize * World::UnitBlockSize, 0);
-    WorldBlock* block = new WorldBlock(originPoint, UnitAreaSize);
+    Chunk* block = new Chunk(originPoint, UnitAreaSize);
     block->worldMap = this;
     block->posX = x;
     block->posY = y;
@@ -78,7 +78,7 @@ void WorldMap::DeleteBlock(Vector3& ori, Vector3& dir)
         entity->isEmpty = true;
         entity->adjacent2Air = false;
 
-        WorldBlock* worldBlock = worldMap->at(BlockPosition{entityBlockX, entityBlockY});
+        Chunk* worldBlock = worldMap->at(BlockPosition{entityBlockX, entityBlockY});
         auto siblings = worldBlock->getSiblingBlocks(entityX,entityY, entityZ);
         for (auto sibling:siblings)
         {
@@ -98,14 +98,14 @@ void WorldMap::FindPickBlock(Vector3& ori, Vector3& dir, Block*& empty, Block*& 
         worldBlock->FindPickBlock(ori, dir, empty, entity);
     }
 
-    WorldBlock* worldBlock = worldMap->at(BlockPosition{entityBlockX, entityBlockY});
+    Chunk* worldBlock = worldMap->at(BlockPosition{entityBlockX, entityBlockY});
     auto siblings = worldBlock->getSiblingBlocks(entityX,entityY, entityZ);
     
     float t;
     float minT = INT_MAX;
     for (auto sibling : siblings)
     {
-        if (sibling && sibling->isEmpty && WorldBlock::Intersect(ori,dir,sibling->axisAlignedBox, t))
+        if (sibling && sibling->isEmpty && Chunk::Intersect(ori,dir,sibling->axisAlignedBox, t))
         {
             if (t < minT && t < minEntityDis)
             {
@@ -137,7 +137,7 @@ void WorldMap::updateBlockNeedRender(Vector3 position)
     }
 }
 
-std::vector<WorldBlock*>& WorldMap::getBlocksNeedRender(Vector3 position)
+std::vector<Chunk*>& WorldMap::getBlocksNeedRender(Vector3 position)
 {
     updateBlockNeedRender(position);
     return BlocksNeedRender;
@@ -172,7 +172,7 @@ void WorldMap::waitThreadsWorkDone()
     }
 }
 
-WorldBlock*& WorldMap::getWorldBlockRef(int x, int y)
+Chunk*& WorldMap::getWorldBlockRef(int x, int y)
 {
         return worldMap->at(BlockPosition{x,y});
 }

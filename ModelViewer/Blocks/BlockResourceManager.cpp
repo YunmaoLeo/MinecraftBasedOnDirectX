@@ -21,7 +21,8 @@ namespace BlockResourceManager
         {Torch, "torch"},
         {Wood, "wood"},
         {Sand, "sand"},
-        {SnowGrass, "grass_snow"}
+        {GrassSnow, "grass_snow"},
+        {GrassWilt, "grass_wilt"}
     };
     std::unordered_map<BlockType, ModelInstance> m_BlockMap;
     std::unordered_map<BlockType, InstancesManager> BlocksInstancesManagerMap;

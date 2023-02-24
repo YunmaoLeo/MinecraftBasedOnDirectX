@@ -39,7 +39,8 @@ namespace BlockResourceManager
         Torch,
         TBall,
         Sand,
-        SnowGrass,
+        GrassSnow,
+        GrassWilt,
         BlocksCount,
     };
 

@@ -7,6 +7,7 @@
 
 #include "OctreeNode.h"
 #include "ShadowCamera.h"
+#include "WorldGenerator.h"
 #include "../Blocks/Block.h"
 #include "Math/Vector.h"
 
@@ -14,15 +15,15 @@ class WorldMap;
 struct GlobalConstants;
 // WorldBlock 中的每一个单元Block对应一个单位长度，以便于忽略掉长度带来的影响
 // Block的坐标以左下方点位作为原点计算，左下方坐标由World创建时传入
-class WorldBlock
+class Chunk
 {
 public:
-    WorldBlock(Math::Vector3 originPoint, uint16_t blockSize)
-        : originPoint(originPoint), worldBlockSize(blockSize)
+    Chunk(Math::Vector3 originPoint, uint16_t blockSize)
+        : originPoint(originPoint), chunkSize(blockSize)
     {
-        blocks.resize(worldBlockSize,
-              std::vector<std::vector<Block>>(worldBlockSize,
-                                              std::vector<Block>(worldBlockDepth)));
+        blocks.resize(chunkSize,
+              std::vector<std::vector<Block>>(chunkSize,
+                                              std::vector<Block>(chunkDepth)));
         InitBlocks();
         id = blockId;
         blockId++;
@@ -44,7 +45,7 @@ public:
         }
     };
 
-    WorldBlock(){};
+    Chunk(){};
 
     void RandomlyGenerateBlocks();
     static bool Intersect(const Math::Vector3& ori, const Math::Vector3& dir, const Math::AxisAlignedBox& box, float& t);
@@ -75,8 +76,8 @@ public:
 
     Math::Vector3 originPoint;
     OctreeNode* octreeNode;
-    uint16_t worldBlockSize = 16;
-    uint16_t worldBlockDepth = 200;
+    uint16_t chunkSize = 16;
+    uint16_t chunkDepth = WorldGenerator::WORLD_DEPTH;
     std::vector<std::vector<std::vector<Block>>> blocks{};
     WorldMap* worldMap;
     int posX;

@@ -3,7 +3,7 @@
 #include <unordered_set>
 
 #include "ThreadPool.h"
-#include "WorldBlock.h"
+#include "Chunk.h"
 
 using namespace Math;
 class WorldMap
@@ -30,11 +30,11 @@ public:
     void PutBlock(Vector3& ori, Vector3& dir, BlockResourceManager::BlockType type);
     void DeleteBlock(Vector3& ori, Vector3& dir);
     void FindPickBlock(Vector3& ori, Vector3& dir, Block*& empty, Block*& entity);
-    std::vector<WorldBlock*>& getBlocksNeedRender(Math::Vector3 position);
+    std::vector<Chunk*>& getBlocksNeedRender(Math::Vector3 position);
     void renderVisibleBlocks(Camera& camera, GraphicsContext& context);
     void waitThreadsWorkDone();
     
-    WorldBlock*& getWorldBlockRef(int x, int y);
+    Chunk*& getWorldBlockRef(int x, int y);
     bool hasBlock(int x, int y);
 
 private:
@@ -54,7 +54,7 @@ private:
     std::unordered_set<BlockPosition, hashName> BlocksCreating;
     int UnitAreaSize;
     int RenderAreaCount;
-    std::unordered_map<BlockPosition, WorldBlock*, hashName>* worldMap{};
-    std::vector<WorldBlock*> BlocksNeedRender{};
+    std::unordered_map<BlockPosition, Chunk*, hashName>* worldMap{};
+    std::vector<Chunk*> BlocksNeedRender{};
 
 };
