@@ -1,8 +1,12 @@
 ﻿#include "Block.h"
 
-Block::Block(Math::Vector3& position, BlockResourceManager::BlockType type, float sideSize, bool empty): position(position),
-    blockType(type), sideSize(sideSize)
+Block::Block(Math::Vector3& position, BlockResourceManager::BlockType type, float size, bool empty): position(position),
+    blockType(type), sideSize(size)
 {
+    if (type == BlockResourceManager::GrassLeaf)
+    {
+        sideSize = sideSize*0.7;
+    }
     if (empty)
     {
         isEmpty = true;
@@ -10,6 +14,10 @@ Block::Block(Math::Vector3& position, BlockResourceManager::BlockType type, floa
     else
     {
         isEmpty = false;
+        if (isTransparentBlock(type))
+        {
+            transparent = true;
+        }
     }
 
     radius = sqrt(std::pow(sideSize, 2)+std::pow(sideSize,2) + std::pow(sideSize,2)) /2;
@@ -28,6 +36,7 @@ Block& Block::operator=(const Block& block)
     this->axisAlignedBox = block.axisAlignedBox;
     this->isDirt = block.isDirt;
     this->isEmpty = block.isEmpty;
+    this->transparent = block.transparent;
 
     return *this;
 }

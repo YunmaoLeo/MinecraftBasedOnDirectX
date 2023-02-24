@@ -22,6 +22,7 @@ namespace WorldGenerator
     extern SimplexNoise humidity;
 
     int getRealHeight(float x, float y);
+
     struct Biomes
     {
         BlockType SurfaceBlock;
@@ -29,15 +30,20 @@ namespace WorldGenerator
         int ShallowSurfaceDepth;
         float plantDensity;
 
-        Biomes(BlockType surface, BlockType shallow, int depth,  float density)
-            :SurfaceBlock(surface),
-        ShallowSurfaceBlock(shallow),
-        plantDensity(density),
-        ShallowSurfaceDepth(depth) {}
-        Biomes(){}
+        Biomes(BlockType surface, BlockType shallow, int depth, float density)
+            : SurfaceBlock(surface),
+              ShallowSurfaceBlock(shallow),
+              plantDensity(density),
+              ShallowSurfaceDepth(depth)
+        {
+        }
+
+        Biomes()
+        {
+        }
     };
-    BlockType getBlockType(float xCoor, float yCoor,float height, Biomes biomes, int z);
-    
+
+    BlockType getBlockType(float xCoor, float yCoor, int height, Biomes biomes, int z);
 
 
     Biomes getBiomes(float x, float y);
@@ -48,5 +54,4 @@ namespace WorldGenerator
     extern Biomes FlourishIceField;
     extern Biomes Forest;
     extern Biomes RainForest;
-    
 };

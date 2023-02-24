@@ -7,35 +7,47 @@
 
 namespace WorldGenerator
 {
-    SimplexNoise continent(0.02, 0.6, 2, 0.5);
+    SimplexNoise continent(0.08, 0.6, 2, 0.5);
     SimplexNoise erosion(0.15, 0.7, 2, 0.5);
     SimplexNoise peaksValleys(0.6, 1, 2, 0.5);
-    SimplexNoise temperature(0.01, 1, 2, 0.5);
-    SimplexNoise humidity(0.01, 1, 2, 0.5);
+    SimplexNoise temperature(0.05, 1, 2, 0.5);
+    SimplexNoise humidity(0.05, 1, 2, 0.5);
     SimplexNoise caves(0.25, 1, 2, 0.5);
 
-    Biomes BarrenIceField(GrassSnow, Dirt, 7, 0.08);
-    Biomes FarInland(GrassWilt, Dirt, 7, 0.1);
-    Biomes Desert(Sand, Sand, 12, 0.1);
-    Biomes FlourishIceField(GrassSnow, Dirt, 9, 0.3);
-    Biomes Forest(Grass, Dirt, 8, 0.4);
-    Biomes RainForest(Grass, Dirt, 12, 0.65);
+    Biomes BarrenIceField(GrassSnow, Dirt, 7, 0.02);
+    Biomes FarInland(GrassWilt, Dirt, 7, 0.02);
+    Biomes Desert(Sand, Sand, 12, 0.02);
+    Biomes FlourishIceField(GrassSnow, Dirt, 9, 0.1);
+    Biomes Forest(Grass, Dirt, 8, 0.1);
+    Biomes RainForest(Grass, Dirt, 12, 0.15);
 
-    BlockType getBlockType(float xCoor, float yCoor, float height, Biomes biomes, int z)
+    BlockType getBlockType(float xCoor, float yCoor, int height, Biomes biomes, int z)
     {
-        if (z >= height && z > SEA_HEIGHT)
+        // return air blocks
+        if (z > height)
         {
             return BlocksCount;
         }
 
-        if (z >= SEA_HEIGHT - 25 && z <= SEA_HEIGHT - 2)
+        // dig out caves
+        // if (z >= SEA_HEIGHT - 25 && z <= SEA_HEIGHT - 2)
+        // {
+        //     float zCoor = (z + 0.5f) * World::UnitBlockSize * 1.001 * COOR_STEP;
+        //     float isCave = caves.fractal(5, xCoor, yCoor, zCoor);
+        //     if (isCave > 0 && isCave < 0.15)
+        //     {
+        //         return BlocksCount;
+        //     }
+        // }
+
+        // surfaceBlock
+        if (z == height)
         {
-            float zCoor = (z + 0.5f) * World::UnitBlockSize * 1.001 * COOR_STEP;
-            float isCave = caves.fractal(5, xCoor, yCoor, zCoor);
-            if (isCave > 0 && isCave < 0.15)
-            {
-                return BlocksCount;
-            }
+            return biomes.SurfaceBlock;
+        }
+        if (z<=height-1 && z>=height - 1 - biomes.ShallowSurfaceDepth)
+        {
+            return biomes.ShallowSurfaceBlock;
         }
 
         return Stone;
@@ -43,16 +55,18 @@ namespace WorldGenerator
 
     Biomes getBiomes(float x, float y)
     {
-        float humidity;
-        float temp;
+        float h = humidity.fractal(4,x,y);
+        h = (h+1)/2;
+        float t = temperature.fractal(4, x,y);
+        t = (t+1)/2;
         Biomes result;
-        if (humidity < HUMIDITY_DRY)
+        if (h < HUMIDITY_DRY)
         {
-            if (temp < TEMP_COLD)
+            if (t < TEMP_COLD)
             {
                 result = BarrenIceField;
             }
-            else if (temp < TEMP_WARM)
+            else if (t < TEMP_WARM)
             {
                 result = FarInland;
             }
@@ -60,15 +74,15 @@ namespace WorldGenerator
             {
                 result = Desert;
             }
-            result.plantDensity = result.plantDensity * (1 + humidity);
+            result.plantDensity = result.plantDensity * (1 + h);
         }
         else
         {
-            if (temp < TEMP_COLD)
+            if (t < TEMP_COLD)
             {
                 result = FlourishIceField;
             }
-            else if (temp < TEMP_WARM)
+            else if (t < TEMP_WARM)
             {
                 result = Forest;
             }
@@ -76,8 +90,9 @@ namespace WorldGenerator
             {
                 result = RainForest;
             }
-            result.plantDensity = result.plantDensity * (1 + (humidity / 3));
+            result.plantDensity = result.plantDensity * (1 + (h / 7));
         }
+        result.ShallowSurfaceDepth = result.ShallowSurfaceDepth * (1+(random.NextInt(20)-10)/100);
 
         return result;
     }
@@ -94,10 +109,10 @@ namespace WorldGenerator
         {
             height -= ero / 1 * (WORLD_DEPTH - SURFACE_HEIGHT) * 0.2;
         }
-        if (ero < 0)
-        {
-            height -= ero * ero / 1 * (WORLD_DEPTH - SURFACE_HEIGHT) * 0.05;
-        }
+        // if (ero < 0)
+        // {
+        //     height -= ero * ero / 1 * (WORLD_DEPTH - SURFACE_HEIGHT) * 0.05;
+        // }
 
         height += pea * (WORLD_DEPTH - SURFACE_HEIGHT) * 0.1;
 

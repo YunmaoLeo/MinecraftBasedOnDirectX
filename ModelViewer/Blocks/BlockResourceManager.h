@@ -6,6 +6,7 @@
 #pragma once
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "Model.h"
 #include "UtilUploadBuffer.h"
@@ -26,30 +27,33 @@ namespace BlockResourceManager
     extern bool m_BlocksInitialized;
 
     enum BlockType
-
     {
         Grass,
         Stone,
         Leaf,
         Dirt,
         Water,
-        Wood,
+        WoodOak,
         Diamond,
         RedStoneLamp,
         Torch,
-        TBall,
         Sand,
         GrassSnow,
         GrassWilt,
+        GrassLeaf,
         BlocksCount,
     };
 
     extern std::unordered_map<BlockType, InstancesManager> BlocksInstancesManagerMap;
-
+    extern std::unordered_set<BlockType> TransparentBlocks;
     extern std::unordered_map<BlockType, ModelInstance> m_BlockMap;
 
     extern std::unordered_map<BlockType, std::string> BlockNameMap;
 
+    inline bool isTransparentBlock(BlockType& type)
+    {
+        return TransparentBlocks.find(type)!=TransparentBlocks.end();
+    }
     void clearVisibleBlocks();
 
     void addBlockIntoManager(BlockType blockType, Math::Vector3 position, float radius);

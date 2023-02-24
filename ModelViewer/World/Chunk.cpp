@@ -23,6 +23,8 @@ BoolVar EnableOctreeCompute("Octree/ComputeOptimize", false);
 void Chunk::RandomlyGenerateBlocks()
 {
     //PerlinNoise noise = PerlinNoise(9);
+    std::vector<std::vector<BlockPlantInfo>> plantInfos;
+    plantInfos.resize(chunkSize, std::vector<BlockPlantInfo>(chunkSize));
     RandomNumberGenerator generator;
     generator.SetSeed(1);
     for (int x = 0; x < chunkSize; x++)
@@ -30,11 +32,11 @@ void Chunk::RandomlyGenerateBlocks()
         for (int y = 0; y < chunkSize; y++)
         {
             float xCoor = (float(originPoint.GetX()) + (x + 0.5f) * UnitBlockSize * 1.001) * WorldGenerator::COOR_STEP;
-            float yCoor = (float(originPoint.GetY()) + (y + 0.5f) * UnitBlockSize * 1.001) *WorldGenerator::COOR_STEP;
+            float yCoor = (float(originPoint.GetY()) + (y + 0.5f) * UnitBlockSize * 1.001) * WorldGenerator::COOR_STEP;
 
             int realHeight = WorldGenerator::getRealHeight(xCoor, yCoor);
             WorldGenerator::Biomes biomes = WorldGenerator::getBiomes(xCoor, yCoor);
-
+            plantInfos[x][y].height = realHeight;
             for (int z = 0; z < this->chunkDepth - 1; z++)
             {
                 Vector3 pointPos = originPoint + Vector3(x + 0.5f, y + 0.5f, z + 0.5f) * UnitBlockSize * 1.001;
@@ -45,8 +47,94 @@ void Chunk::RandomlyGenerateBlocks()
 
                 blocks[x][y][z] = Block(pointPos, blockType, UnitBlockSize, isEmpty);
             }
+
+            if (random.NextFloat() < biomes.plantDensity)
+            {
+                if (random.NextFloat() > pow(biomes.plantDensity, 0.5))
+                {
+                    plantInfos[x][y].plantType = 1;
+                }
+                else
+                {
+                    if (!(x <= 1 || x >= chunkSize - 2 || y <= 1 || y >= chunkSize - 2))
+                    {
+                        plantInfos[x][y].plantType = 3;
+                        int woodTop = realHeight + 4+ (random.NextInt(2)) + 2;
+                        plantInfos[x][y].woodTopHeight = woodTop;
+                        for (int i = x - 2; i <= x + 2; i++)
+                        {
+                            for (int j = y - 2; j <= y + 2; j++)
+                            {
+                                if (x == i && y == j)
+                                {
+                                    continue;
+                                }
+                                plantInfos[i][j].plantType = 2;
+                                plantInfos[i][j].woodTopHeight = woodTop;
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
+
+    for (int x = 0; x < chunkSize; x++)
+    {
+        for (int y = 0; y < chunkSize; y++)
+        {
+            int type = plantInfos[x][y].plantType;
+            if (type == 0)
+            {
+                continue;
+            }
+            if (type == 1)
+            {
+                Block& block = blocks[x][y][plantInfos[x][y].height + 1];
+                block.blockType = GrassLeaf;
+                block.isEmpty = false;
+                block.transparent = true;
+            }
+            if (type == 2)
+            {
+                for (int h = plantInfos[x][y].woodTopHeight-3+random.NextInt(2);
+                    h<=plantInfos[x][y].woodTopHeight - random.NextInt(1);
+                    h++)
+                {
+                    Block& block = blocks[x][y][h];
+                    if (block.blockType==BlocksCount)
+                    {
+                        block.blockType = Leaf;
+                        block.isEmpty = false;
+                    }
+
+                }
+            }
+            if (type==3)
+            {
+                BlockPlantInfo& info = plantInfos[x][y];
+                for (int h=info.height+1; h<=info.woodTopHeight; h++)
+                {
+                    Block& block = blocks[x][y][h];
+                    block.isEmpty = false;
+                    if (h>=info.woodTopHeight-1)
+                    {
+                        block.blockType = Leaf;
+                    }
+                    else
+                    {
+                        block.blockType = WoodOak;
+                    }
+                }
+                auto& blockType = blocks[x][y][info.height-1].blockType;
+                if (blockType ==Grass || blockType == GrassSnow || blockType==GrassWilt)
+                {
+                    blockType = Dirt;
+                }
+            }
+        }
+    }
+
     for (int z = 0; z < chunkDepth; z++)
     {
         for (int y = 0; y < chunkSize; y++)
@@ -164,7 +252,7 @@ void Chunk::InitBlocks()
 
 
 bool Chunk::FindPickBlockInRange(int minX, int maxX, int minY, int maxY, int minZ, int maxZ, Vector3 ori,
-                                      Vector3 dir, Block*& empty, Block*& entity)
+                                 Vector3 dir, Block*& empty, Block*& entity)
 {
     float t;
     bool result = false;
@@ -396,7 +484,7 @@ void Chunk::SearchBlocksAdjacent2OuterAir()
         {
             for (int z = chunkDepth - 1; z >= 0; z--)
             {
-                if (blocks[x][y][z].IsNull())
+                if (blocks[x][y][z].IsNull() || blocks[x][y][z].isTransparent())
                 {
                     SpreadAdjacent2OuterAir(x + 1, y, z, blocksStatus);
                     SpreadAdjacent2OuterAir(x - 1, y, z, blocksStatus);
@@ -423,7 +511,7 @@ void Chunk::RenderSingleBlock(int x, int y, int z)
 }
 
 void Chunk::RenderBlocksInRange(int minX, int maxX, int minY, int maxY, int minZ, int maxZ,
-                                     const Camera& camera)
+                                const Camera& camera)
 {
     for (int x = minX; x <= maxX; x++)
     {
@@ -539,7 +627,7 @@ bool Chunk::isAdjacent2OuterAir(int x, int y, int z)
 }
 
 void Chunk::CreateOctreeNode(OctreeNode* & node, int minX, int maxX, int minY, int maxY, int minZ, int maxZ,
-                                  int depth)
+                             int depth)
 {
     if (minX >= maxX || minY >= maxY || minZ >= maxZ)
     {
@@ -628,7 +716,7 @@ void Chunk::OctreeRenderBlocks(OctreeNode* & node, const Camera& camera)
 }
 
 void Chunk::OctreeRenderBlocks(int minX, int maxX, int minY, int maxY, int minZ, int maxZ, int depth,
-                                    const Camera& camera)
+                               const Camera& camera)
 {
     //check bounding box intersection
     AxisAlignedBox box;

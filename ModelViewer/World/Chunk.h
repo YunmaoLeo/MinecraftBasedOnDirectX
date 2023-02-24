@@ -32,6 +32,13 @@ public:
     static int blockId;
     int id;
 
+    struct BlockPlantInfo
+    {
+        int height = 0;
+        int plantType = 0; //0 for nothing, 1 for grass, 2 for leaf, 3 for wood.
+        int woodTopHeight = 0;
+    };
+
     struct BlockPosition
     {
         int x;

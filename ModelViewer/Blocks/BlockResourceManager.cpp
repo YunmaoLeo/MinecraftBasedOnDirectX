@@ -10,7 +10,6 @@ namespace BlockResourceManager
 {
     bool m_BlocksInitialized = true;
     std::unordered_map<BlockType, std::string> BlockNameMap = {
-        {TBall, "tball"},
         {Leaf, "leaf"},
         {Water, "water"},
         {Diamond, "diamond"},
@@ -19,11 +18,18 @@ namespace BlockResourceManager
         {RedStoneLamp, "redstonelamp"},
         {Stone, "stone"},
         {Torch, "torch"},
-        {Wood, "wood"},
+        {WoodOak, "wood_oak"},
         {Sand, "sand"},
         {GrassSnow, "grass_snow"},
-        {GrassWilt, "grass_wilt"}
+        {GrassWilt, "grass_wilt"},
+        {GrassLeaf, "grass_leaf"}
     };
+
+    std::unordered_set<BlockType> TransparentBlocks = {
+        Water,
+        GrassLeaf,
+    };
+    
     std::unordered_map<BlockType, ModelInstance> m_BlockMap;
     std::unordered_map<BlockType, InstancesManager> BlocksInstancesManagerMap;
     
