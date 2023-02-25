@@ -28,13 +28,18 @@ namespace WorldGenerator
         BlockType SurfaceBlock;
         BlockType ShallowSurfaceBlock;
         int ShallowSurfaceDepth;
-        float plantDensity;
+        float PlantDensity;
+        int TreeHeight;
+        int TreeWidth;
 
-        Biomes(BlockType surface, BlockType shallow, int depth, float density)
+        Biomes(BlockType surface, BlockType shallow, int depth, float density, int treeHeight, int treeWidth)
             : SurfaceBlock(surface),
               ShallowSurfaceBlock(shallow),
-              plantDensity(density),
-              ShallowSurfaceDepth(depth)
+              PlantDensity(density),
+              ShallowSurfaceDepth(depth),
+                TreeHeight(treeHeight),
+        TreeWidth(treeWidth)
+        
         {
         }
 

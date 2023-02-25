@@ -26,7 +26,7 @@ void Chunk::RandomlyGenerateBlocks()
     std::vector<std::vector<BlockPlantInfo>> plantInfos;
     plantInfos.resize(chunkSize, std::vector<BlockPlantInfo>(chunkSize));
     RandomNumberGenerator generator;
-    generator.SetSeed(1);
+    generator.SetSeed(3);
     for (int x = 0; x < chunkSize; x++)
     {
         for (int y = 0; y < chunkSize; y++)
@@ -48,25 +48,40 @@ void Chunk::RandomlyGenerateBlocks()
                 blocks[x][y][z] = Block(pointPos, blockType, UnitBlockSize, isEmpty);
             }
 
-            if (random.NextFloat() < biomes.plantDensity)
+            if (realHeight <= WorldGenerator::SEA_HEIGHT)
             {
-                if (random.NextFloat() > pow(biomes.plantDensity, 0.5))
+                continue;
+            }
+
+            // generate biomes condition
+            int leafWidth = biomes.TreeHeight/4;
+            leafWidth += (biomes.TreeWidth-1);
+            if (random.NextFloat() < biomes.PlantDensity)
+            {
+                if (random.NextFloat() > pow(biomes.PlantDensity, 0.5))
                 {
                     plantInfos[x][y].plantType = 1;
                 }
                 else
                 {
-                    if (!(x <= 1 || x >= chunkSize - 2 || y <= 1 || y >= chunkSize - 2))
+                    if (!(x <= leafWidth-1 || x >= chunkSize - leafWidth || y <= leafWidth-1 || y >= chunkSize - leafWidth))
                     {
-                        plantInfos[x][y].plantType = 3;
-                        int woodTop = realHeight + 4+ (random.NextInt(2)) + 2;
-                        plantInfos[x][y].woodTopHeight = woodTop;
-                        for (int i = x - 2; i <= x + 2; i++)
+                        if (plantInfos[x][y].plantType != 0)
                         {
-                            for (int j = y - 2; j <= y + 2; j++)
+                            continue;
+                        }
+                        plantInfos[x][y].plantType = 3;
+                        int woodTop = realHeight + biomes.TreeHeight+ (random.NextInt(biomes.TreeHeight/10)) + 2;
+                        plantInfos[x][y].woodTopHeight = woodTop;
+                        int tw = biomes.TreeWidth - 1;
+                        for (int i = x - leafWidth; i <= x + leafWidth; i++)
+                        {
+                            for (int j = y - leafWidth; j <= y + leafWidth; j++)
                             {
-                                if (x == i && y == j)
+                                if (i <= x+tw && i>=x-tw && j>= y-tw &&j <= y+tw)
                                 {
+                                    plantInfos[i][j].plantType = 3;
+                                    plantInfos[i][j].woodTopHeight = woodTop;
                                     continue;
                                 }
                                 plantInfos[i][j].plantType = 2;
@@ -79,6 +94,7 @@ void Chunk::RandomlyGenerateBlocks()
         }
     }
 
+    // adopt plants
     for (int x = 0; x < chunkSize; x++)
     {
         for (int y = 0; y < chunkSize; y++)
@@ -97,17 +113,21 @@ void Chunk::RandomlyGenerateBlocks()
             }
             if (type == 2)
             {
-                for (int h = plantInfos[x][y].woodTopHeight-3+random.NextInt(2);
+                for (int h = plantInfos[x][y].woodTopHeight-3 - random.NextInt(1);
                     h<=plantInfos[x][y].woodTopHeight - random.NextInt(1);
                     h++)
                 {
                     Block& block = blocks[x][y][h];
                     if (block.blockType==BlocksCount)
                     {
-                        block.blockType = Leaf;
-                        block.isEmpty = false;
+                        if (random.NextFloat() < 0.7)
+                        {
+                            block.blockType = Leaf;
+                            block.isEmpty = false;
+                        }
+          
                     }
-
+    
                 }
             }
             if (type==3)
@@ -126,7 +146,7 @@ void Chunk::RandomlyGenerateBlocks()
                         block.blockType = WoodOak;
                     }
                 }
-                auto& blockType = blocks[x][y][info.height-1].blockType;
+                auto& blockType = blocks[x][y][info.height].blockType;
                 if (blockType ==Grass || blockType == GrassSnow || blockType==GrassWilt)
                 {
                     blockType = Dirt;
