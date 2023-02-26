@@ -19,14 +19,11 @@ BoolVar EnableOctree("Octree/EnableOctree", true);
 BoolVar EnableContainTest("Octree/EnableContainTest", true);
 BoolVar EnableOctreeCompute("Octree/ComputeOptimize", false);
 
-
 void Chunk::RandomlyGenerateBlocks()
 {
     //PerlinNoise noise = PerlinNoise(9);
     std::vector<std::vector<BlockPlantInfo>> plantInfos;
     plantInfos.resize(chunkSize, std::vector<BlockPlantInfo>(chunkSize));
-    RandomNumberGenerator generator;
-    generator.SetSeed(3);
     for (int x = 0; x < chunkSize; x++)
     {
         for (int y = 0; y < chunkSize; y++)
@@ -34,8 +31,9 @@ void Chunk::RandomlyGenerateBlocks()
             float xCoor = (float(originPoint.GetX()) + (x + 0.5f) * UnitBlockSize * 1.001) * WorldGenerator::COOR_STEP;
             float yCoor = (float(originPoint.GetY()) + (y + 0.5f) * UnitBlockSize * 1.001) * WorldGenerator::COOR_STEP;
 
-            int realHeight = WorldGenerator::getRealHeight(xCoor, yCoor);
-            WorldGenerator::Biomes biomes = WorldGenerator::getBiomes(xCoor, yCoor);
+            WorldGenerator::Biomes biomes;
+            int realHeight = WorldGenerator::getRealHeightAndBiomes(xCoor, yCoor, biomes);
+            
             plantInfos[x][y].height = realHeight;
             for (int z = 0; z < this->chunkDepth - 1; z++)
             {
@@ -44,8 +42,7 @@ void Chunk::RandomlyGenerateBlocks()
 
                 auto blockType = WorldGenerator::getBlockType(xCoor, yCoor, realHeight, biomes, z);
                 bool isEmpty = (blockType == BlocksCount);
-
-                blocks[x][y][z] = Block(pointPos, blockType, UnitBlockSize, isEmpty);
+                blocks[x][y][z] = std::move(Block(pointPos, blockType, UnitBlockSize, isEmpty));
             }
 
             if (realHeight <= WorldGenerator::SEA_HEIGHT)
@@ -64,6 +61,7 @@ void Chunk::RandomlyGenerateBlocks()
                 }
                 else
                 {
+                    if (biomes.TreeHeight <=0) continue;
                     if (!(x <= leafWidth-1 || x >= chunkSize - leafWidth || y <= leafWidth-1 || y >= chunkSize - leafWidth))
                     {
                         if (plantInfos[x][y].plantType != 0)
@@ -261,7 +259,7 @@ bool Chunk::Intersect(const Vector3& ori, const Vector3& dir, const AxisAlignedB
     return false;
 }
 
-void Chunk::InitBlocks()
+void Chunk::InitChunks()
 {
     RandomlyGenerateBlocks();
     SearchBlocksAdjacent2OuterAir();

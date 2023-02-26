@@ -52,7 +52,11 @@ namespace BlockResourceManager
 
     inline bool isTransparentBlock(BlockType& type)
     {
-        return TransparentBlocks.find(type)!=TransparentBlocks.end();
+        if (type == GrassLeaf)
+        {
+            return true;
+        }
+        return false;
     }
     void clearVisibleBlocks();
 

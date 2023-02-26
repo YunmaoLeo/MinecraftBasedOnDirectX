@@ -31,18 +31,13 @@ public:
     float sideSize;
     float radius;
     bool isEmpty = true;
-    bool isDirt = true;
     bool hasCheckSibling = false;
     bool isEdgeBlock = false;
     bool transparent = false;
     bool adjacent2Air = false;
     Math::Vector3 position;
     BlockResourceManager::BlockType blockType;
-    // Math::BoundingSphere boundingSphere;
     Math::AxisAlignedBox axisAlignedBox;
-
-    Math::Matrix4* worldMatrix;
-    Math::Matrix4* worldIT;
 
 private:
 };

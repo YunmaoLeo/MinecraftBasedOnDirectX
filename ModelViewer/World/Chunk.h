@@ -24,7 +24,7 @@ public:
         blocks.resize(chunkSize,
               std::vector<std::vector<Block>>(chunkSize,
                                               std::vector<Block>(chunkDepth)));
-        InitBlocks();
+        InitChunks();
         id = blockId;
         blockId++;
     }
@@ -56,7 +56,7 @@ public:
 
     void RandomlyGenerateBlocks();
     static bool Intersect(const Math::Vector3& ori, const Math::Vector3& dir, const Math::AxisAlignedBox& box, float& t);
-    void InitBlocks();
+    void InitChunks();
     bool FindPickBlockInRange(int minX, int maxX, int minY, int maxY, int minZ, int maxZ, Math::Vector3 ori,
                               Math::Vector3 dir, Block*& empty, Block*& entity);
     bool FindPickBlockInOctree(OctreeNode* node, Math::Vector3& ori, Math::Vector3& dir, Block*& empty, Block*& entity);

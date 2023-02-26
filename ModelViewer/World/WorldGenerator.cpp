@@ -14,13 +14,15 @@ namespace WorldGenerator
     SimplexNoise humidity(0.01, 1, 2, 0.5);
     SimplexNoise caves(0.8, 1, 2, 0.5);
 
-    Biomes BarrenIceField(GrassSnow, Dirt, 7, 0.02, 20, 1);
-    Biomes FarInland(GrassWilt, Dirt, 7, 0.02, 15, 1);
+    Biomes BarrenIceField(GrassSnow, Dirt, 7, 0.01, 20, 1);
+    Biomes InlandForest(GrassWilt, Dirt, 7, 0.01, 15, 1);
+    Biomes InlandPlain(GrassWilt, Dirt, 7, 0.05, 0,0);
     Biomes Desert(Sand, Sand, 12, 0, 0, 0);
-    Biomes FlourishIceField(GrassSnow, Dirt, 9, 0.1, 15, 1);
-    Biomes Forest(Grass, Dirt, 8, 0.1, 6, 1);
-    Biomes RainForest(Grass, Dirt, 12, 0.15, 15, 2);
-
+    Biomes FlourishIceField(GrassSnow, Dirt, 9, 0.05, 15, 1);
+    Biomes Forest(Grass, Dirt, 8, 0.05, 6, 1);
+    Biomes RainForest(Grass, Dirt, 12, 0.10, 15, 2);
+    Biomes Savanna(Grass, Dirt, 12, 0.1, 0, 0);
+    
     int ANOTHER_HEIGHT = SEA_HEIGHT + 12;
     std::map<float, float> ContinentalnessNodes = {
         {-1.0, ANOTHER_HEIGHT},
@@ -70,11 +72,11 @@ namespace WorldGenerator
         }
 
         //dig out caves
-        // if (height > SEA_HEIGHT && z >= ANOTHER_HEIGHT - 20 && z <= ANOTHER_HEIGHT + 2)
+        // if (height > SEA_HEIGHT && z >= height - 35 && z <= height -10 && z>=SURFACE_HEIGHT)
         // {
         //     float zCoor = (z + 0.5f) * World::UnitBlockSize * 1.001 * COOR_STEP;
         //     float isCave = caves.fractal(5, xCoor, yCoor, zCoor);
-        //     if (isCave > 0 && isCave < 0.1)
+        //     if (abs(isCave) < 0.1)
         //     {
         //         return BlocksCount;
         //     }
@@ -125,7 +127,7 @@ namespace WorldGenerator
     }
 
 
-    int getRealHeight(float x, float y)
+    int getRealHeightAndBiomes(float x, float y, Biomes& biomes)
     {
         float cont = continent.fractal(4, x, y);
         float ero = erosion.fractal(5, x, y);
@@ -140,51 +142,57 @@ namespace WorldGenerator
         if (height >= WORLD_DEPTH * 0.95) height = WORLD_DEPTH * 0.95;
         if (height < 0) height = 0;
 
-        return height;
-    }
-
-
-    Biomes getBiomes(float x, float y)
-    {
         float h = humidity.fractal(4, x, y);
         h = (h + 1) / 2;
         float t = temperature.fractal(4, x, y);
         t = (t + 1) / 2;
         Biomes result;
-        if (h < HUMIDITY_DRY)
+
+        if (cont < 0.1)
         {
-            if (t < TEMP_COLD)
+            // coastline
+            if (ero < 0.0)
             {
-                result = BarrenIceField;
-            }
-            else if (t < TEMP_WARM)
-            {
-                result = FarInland;
+                // coastline hills
+                if (t < TEMP_COLD)
+                {
+                    result = FlourishIceField;
+                }
+                else if (t<TEMP_WARM)
+                {
+                    result = Savanna;
+                }
+                else if (t<TEMP_HOT)
+                {
+                    if (h > HUMIDITY_DRY) result  = RainForest;
+                    else result = Savanna;
+                }
             }
             else
-            {
-                result = Desert;
-            }
-            result.PlantDensity = result.PlantDensity * (1 + h);
-        }
-        else
-        {
-            if (t < TEMP_COLD)
-            {
-                result = FlourishIceField;
-            }
-            else if (t < TEMP_WARM)
             {
                 result = Forest;
             }
+
+        }
+        else
+        {
+            // far inland
+            if (ero < 0.0)
+            {
+                //inland mountains;
+                if (t < TEMP_COLD) result = BarrenIceField;
+                else result = InlandForest;
+            }
             else
             {
-                result = RainForest;
+                if (t > TEMP_WARM) result = Desert;
+                else result = InlandPlain;
             }
-            result.PlantDensity = result.PlantDensity * (1 + (h / 7));
         }
-        result.ShallowSurfaceDepth = result.ShallowSurfaceDepth * (1 + (random.NextInt(20) - 10) / 100);
+        
+        result.ShallowSurfaceDepth = result.ShallowSurfaceDepth * (1 + (random.NextInt(40) - 10) / 100);
+        biomes = result;
 
-        return result;
+        return height;
     }
 }

@@ -1,7 +1,9 @@
 ﻿#include "Block.h"
 
+#include "../World/World.h"
+
 Block::Block(Math::Vector3& position, BlockResourceManager::BlockType type, float size, bool empty): position(position),
-    blockType(type), sideSize(size)
+                                                                                                     blockType(type), sideSize(size)
 {
     if (type == BlockResourceManager::GrassLeaf)
     {
@@ -34,7 +36,6 @@ Block& Block::operator=(const Block& block)
     this->blockType = block.blockType;
     // this->boundingSphere = block.boundingSphere;
     this->axisAlignedBox = block.axisAlignedBox;
-    this->isDirt = block.isDirt;
     this->isEmpty = block.isEmpty;
     this->transparent = block.transparent;
 
@@ -47,7 +48,6 @@ void Block::Update(float deltaT)
     {
         return;
     }
-    isDirt = false;
 }
 
 void Block::ClearUp()

@@ -21,7 +21,7 @@ namespace WorldGenerator
     extern SimplexNoise temperature;
     extern SimplexNoise humidity;
 
-    int getRealHeight(float x, float y);
+
 
     struct Biomes
     {
@@ -48,13 +48,15 @@ namespace WorldGenerator
         }
     };
 
+    int getRealHeightAndBiomes(float x, float y, Biomes& biomes);
+
     BlockType getBlockType(float xCoor, float yCoor, int height, Biomes biomes, int z);
 
 
     Biomes getBiomes(float x, float y);
 
     extern Biomes BarrenIceField;
-    extern Biomes FarInland;
+    extern Biomes InlandForest;
     extern Biomes Desert;
     extern Biomes FlourishIceField;
     extern Biomes Forest;
