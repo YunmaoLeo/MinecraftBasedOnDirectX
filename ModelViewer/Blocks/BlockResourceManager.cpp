@@ -31,27 +31,28 @@ namespace BlockResourceManager
     };
     
     std::unordered_map<BlockType, ModelInstance> m_BlockMap;
-    std::unordered_map<BlockType, InstancesManager> BlocksInstancesManagerMap;
+    std::unordered_map<BlockType, InstancesManager*> BlocksInstancesManagerMap;
     
 }
 
 void BlockResourceManager::clearVisibleBlocks()
 {
-    for (int i =0; i<BlocksCount; i++)
+    for (int i =0; i<Air; i++)
     {
         auto type = static_cast<BlockType>(i);
-        InstancesManager& manager = BlocksInstancesManagerMap[type];
-        manager.visibleBlockNumber = 0;
+        InstancesManager* manager = BlocksInstancesManagerMap[type];
+        manager->visibleBlockNumber = 0;
     }
 }
 
 std::mutex mtx;
 
-void BlockResourceManager::addBlockIntoManager(BlockType blockType, Math::Vector3 position, float radius)
+void BlockResourceManager::addBlockIntoManager(BlockType& blockType, Math::Vector3& position, float& radius)
 {
-    InstancesManager& manager = BlocksInstancesManagerMap[blockType];
+
+    InstancesManager* manager = BlocksInstancesManagerMap[blockType];
     
-    InstanceData data;
+    InstanceData data{};
     
     Math::Matrix4 worldMatrix(Math::kIdentity);
     Math::UniformTransform locator(Math::kIdentity);
@@ -64,7 +65,7 @@ void BlockResourceManager::addBlockIntoManager(BlockType blockType, Math::Vector
     XMStoreFloat3x3(&data.WorldIT, XMMATRIX(worldIT));
     
     mtx.lock();
-    if (manager.MAX_BLOCK_NUMBER <= manager.visibleBlockNumber+1)
+    if (manager->MAX_BLOCK_NUMBER <= manager->visibleBlockNumber)
     {
         std::cout << "achieve max number" << std::endl;
         mtx.unlock();
@@ -72,15 +73,15 @@ void BlockResourceManager::addBlockIntoManager(BlockType blockType, Math::Vector
     }
 
 
-    manager.InstanceBuffer.get()->CopyData(manager.visibleBlockNumber, data);
-    manager.visibleBlockNumber++;
+    manager->InstanceBuffer.get()->CopyData(manager->visibleBlockNumber, data);
+    manager->visibleBlockNumber++;
     mtx.unlock();
 }
 
 void BlockResourceManager::initBlocks()
 {
     //read resources according to BlockType enum list;
-    for (int i = 0; i < BlockType::BlocksCount; i++)
+    for (int i = 0; i < BlockType::Air; i++)
     {
         auto type = static_cast<BlockType>(i);
         std::string BlockName = BlockNameMap[type];
@@ -93,13 +94,13 @@ void BlockResourceManager::initBlocks()
         std::cout << "ModelCheck numNodes: "<<model.m_Model->m_NumNodes <<std::endl;
         m_BlockMap[type] = model.m_Model;
 
-        BlocksInstancesManagerMap[type] = InstancesManager();
+        BlocksInstancesManagerMap[type] = new InstancesManager();
         // if (type != Dirt && type !=Grass && type!=Stone && type!=Water)
         // {
         //     BlocksInstancesManagerMap[type].MAX_BLOCK_NUMBER/=10;
         // }
-        BlocksInstancesManagerMap[type].initManager();
-        ASSERT_SUCCEEDED(BlocksInstancesManagerMap.size()==BlockType::BlocksCount);
+        BlocksInstancesManagerMap[type]->initManager();
+        ASSERT_SUCCEEDED(BlocksInstancesManagerMap.size()==BlockType::Air);
     }
     m_BlocksInitialized = true;
 }

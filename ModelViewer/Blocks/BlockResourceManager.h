@@ -41,10 +41,10 @@ namespace BlockResourceManager
         GrassSnow,
         GrassWilt,
         GrassLeaf,
-        BlocksCount,
+        Air,
     };
 
-    extern std::unordered_map<BlockType, InstancesManager> BlocksInstancesManagerMap;
+    extern std::unordered_map<BlockType, InstancesManager*> BlocksInstancesManagerMap;
     extern std::unordered_set<BlockType> TransparentBlocks;
     extern std::unordered_map<BlockType, ModelInstance> m_BlockMap;
 
@@ -60,7 +60,7 @@ namespace BlockResourceManager
     }
     void clearVisibleBlocks();
 
-    void addBlockIntoManager(BlockType blockType, Math::Vector3 position, float radius);
+    void addBlockIntoManager(BlockType& blockType, Math::Vector3& position, float& radius);
 
     void initBlocks();
 
@@ -69,13 +69,13 @@ namespace BlockResourceManager
 
     inline InstancesManager& getManager(BlockType type)
     {
-        return BlocksInstancesManagerMap[type];
+        return *BlocksInstancesManagerMap[type];
     }
 
     class InstancesManager
     {
     public:
-        uint32_t MAX_BLOCK_NUMBER = 40960;
+        uint32_t MAX_BLOCK_NUMBER = 80960;
         std::vector<InstanceData> InstanceVector{};
         std::unique_ptr<UtilUploadBuffer<InstanceData>> InstanceBuffer = nullptr;
         uint32_t visibleBlockNumber = 0;
@@ -97,7 +97,7 @@ namespace BlockResourceManager
         void initManager()
         {
             InstanceBuffer = std::make_unique<UtilUploadBuffer<InstanceData>>(Graphics::g_Device, MAX_BLOCK_NUMBER);
-            InstanceVector.resize(MAX_BLOCK_NUMBER);
+            // InstanceVector.resize(MAX_BLOCK_NUMBER);
         }
     };
 };

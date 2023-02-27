@@ -63,7 +63,6 @@ void WorldMap::PutBlock(Vector3& ori, Vector3& dir, BlockResourceManager::BlockT
     if (empty!=nullptr)
     {
         empty->blockType = type;
-        empty->isEmpty = false;
         empty->adjacent2Air = true;
     }
 }
@@ -75,14 +74,14 @@ void WorldMap::DeleteBlock(Vector3& ori, Vector3& dir)
     FindPickBlock(ori,dir,empty, entity);
     if (entity!=nullptr)
     {
-        entity->isEmpty = true;
+        entity->blockType = Air;
         entity->adjacent2Air = false;
 
         Chunk* worldBlock = worldMap->at(BlockPosition{entityBlockX, entityBlockY});
         auto siblings = worldBlock->getSiblingBlocks(entityX,entityY, entityZ);
         for (auto sibling:siblings)
         {
-            if (sibling && !sibling->isEmpty)
+            if (sibling && !sibling->IsNull())
             {
                 sibling->adjacent2Air = true;
             }
@@ -105,7 +104,8 @@ void WorldMap::FindPickBlock(Vector3& ori, Vector3& dir, Block*& empty, Block*& 
     float minT = INT_MAX;
     for (auto sibling : siblings)
     {
-        if (sibling && sibling->isEmpty && Chunk::Intersect(ori,dir,sibling->axisAlignedBox, t))
+        if (sibling && sibling->IsNull()
+            && Chunk::Intersect(ori,dir,Chunk::GetScaledSizeAxisBox(sibling->position), t))
         {
             if (t < minT && t < minEntityDis)
             {
@@ -172,7 +172,7 @@ void WorldMap::waitThreadsWorkDone()
     }
 }
 
-Chunk*& WorldMap::getWorldBlockRef(int x, int y)
+Chunk* WorldMap::getWorldBlockRef(int x, int y)
 {
         return worldMap->at(BlockPosition{x,y});
 }
@@ -206,7 +206,7 @@ void WorldMap::initBufferArea(BlockPosition pos)
 }
 
 
-WorldMap::BlockPosition WorldMap::getPositionOfCamera(Math::Vector3 position)
+WorldMap::BlockPosition WorldMap::getPositionOfCamera(Math::Vector3& position)
 {
     int y = float(position.GetZ() - mapOriginPoint.GetY()) / (UnitAreaSize * World::UnitBlockSize);
     int x = float(position.GetX() - mapOriginPoint.GetX()) / (UnitAreaSize * World::UnitBlockSize);

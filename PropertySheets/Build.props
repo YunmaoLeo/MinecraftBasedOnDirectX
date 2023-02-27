@@ -18,11 +18,12 @@
     </ClCompile>
 	<ClCompile Condition="'$(Configuration)'=='Debug'">
 	  <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+<!--      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>-->
       <MinimalRebuild>false</MinimalRebuild>
-      <Optimization>Disabled</Optimization>
+      <Optimization>MaxSpeed</Optimization>
       <BufferSecurityCheck>true</BufferSecurityCheck>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-	  <FunctionLevelLinking>false</FunctionLevelLinking>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+	  <FunctionLevelLinking>true</FunctionLevelLinking>
 	</ClCompile>
 	<ClCompile Condition="'$(Configuration)'=='Profile'">
       <PreprocessorDefinitions>NDEBUG;PROFILE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -34,6 +35,7 @@
 	<ClCompile Condition="'$(Configuration)'=='Release'">
       <PreprocessorDefinitions>NDEBUG;RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+        <BufferSecurityCheck>true</BufferSecurityCheck>
       <Optimization>MaxSpeed</Optimization>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
 	  <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -44,6 +46,8 @@
       <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
     </Link>
     <Link Condition="'$(Configuration)'=='Debug'">
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <Link Condition="'$(Configuration)'=='Profile'">
       <EnableCOMDATFolding>true</EnableCOMDATFolding>

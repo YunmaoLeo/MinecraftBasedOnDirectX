@@ -8,7 +8,7 @@ namespace WorldGenerator
 {
     constexpr float HUMIDITY_DRY = 0.3;
     constexpr float HUMIDITY_WET = 1;
-    constexpr float TEMP_COLD = 0.2;
+    constexpr float TEMP_COLD = 0.3;
     constexpr float TEMP_WARM = 0.7;
     constexpr float TEMP_HOT = 1;
     constexpr int WORLD_DEPTH = 128;

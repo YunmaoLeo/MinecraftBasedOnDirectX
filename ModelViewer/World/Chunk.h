@@ -7,6 +7,7 @@
 
 #include "OctreeNode.h"
 #include "ShadowCamera.h"
+#include "World.h"
 #include "WorldGenerator.h"
 #include "../Blocks/Block.h"
 #include "Math/Vector.h"
@@ -53,7 +54,13 @@ public:
     };
 
     Chunk(){};
-
+    static Math::AxisAlignedBox GetScaledSizeAxisBox(Math::Vector3& position)
+    {
+        float sideSize = World::UnitBlockSize;
+        return {position+ Math::Vector3(-sideSize/2,-sideSize/2,-sideSize/2),
+        position+Math::Vector3(sideSize/2, sideSize/2,sideSize/2)};
+    }
+    Math::AxisAlignedBox GetAxisAlignedBox(int x, int y, int z);
     void RandomlyGenerateBlocks();
     static bool Intersect(const Math::Vector3& ori, const Math::Vector3& dir, const Math::AxisAlignedBox& box, float& t);
     void InitChunks();

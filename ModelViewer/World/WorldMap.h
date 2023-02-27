@@ -33,8 +33,8 @@ public:
     std::vector<Chunk*>& getBlocksNeedRender(Math::Vector3 position);
     void renderVisibleBlocks(Camera& camera, GraphicsContext& context);
     void waitThreadsWorkDone();
-    
-    Chunk*& getWorldBlockRef(int x, int y);
+
+    Chunk* getWorldBlockRef(int x, int y);
     bool hasBlock(int x, int y);
 
 private:
@@ -47,7 +47,7 @@ private:
     };
     void initBufferArea(BlockPosition pos);
     void updateBlockNeedRender(Vector3 position);
-    BlockPosition getPositionOfCamera(Math::Vector3 position);
+    BlockPosition getPositionOfCamera(Math::Vector3& position);
     Vector3 mapOriginPoint;
     ThreadPool* thread_pool;
     std::vector<std::future<bool>> threadResultVector;

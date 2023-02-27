@@ -17,7 +17,24 @@ NumVar MaxOctreeDepth("Octree/Depth", 2, 0, 10, 1);
 NumVar MaxOctreeNodeLength("Octree/Length", 2, 0, 20, 1);
 BoolVar EnableOctree("Octree/EnableOctree", true);
 BoolVar EnableContainTest("Octree/EnableContainTest", true);
-BoolVar EnableOctreeCompute("Octree/ComputeOptimize", false);
+BoolVar EnableOctreeCompute("Octree/ComputeOptimize", true);
+BoolVar EnableBoxDetect("Octree/BoxDetect", true);
+
+AxisAlignedBox Chunk::GetAxisAlignedBox(int x, int y, int z)
+{
+    Vector3& position = blocks[x][y][z].position;
+    float s = blocks[x][y][z].sideSize;
+    AxisAlignedBox box;
+    box.AddPoint(position + Vector3(-s / 2, -s / 2, -s / 2));
+    box.AddPoint(position + Vector3(+s / 2, -s / 2, -s / 2));
+    box.AddPoint(position + Vector3(-s / 2, -s / 2, +s / 2));
+    box.AddPoint(position + Vector3(+s / 2, -s / 2, +s / 2));
+    box.AddPoint(position + Vector3(-s / 2, +s / 2, -s / 2));
+    box.AddPoint(position + Vector3(+s / 2, +s / 2, -s / 2));
+    box.AddPoint(position + Vector3(-s / 2, +s / 2, +s / 2));
+    box.AddPoint(position + Vector3(+s / 2, +s / 2, +s / 2));
+    return box;
+}
 
 void Chunk::RandomlyGenerateBlocks()
 {
@@ -33,16 +50,15 @@ void Chunk::RandomlyGenerateBlocks()
 
             WorldGenerator::Biomes biomes;
             int realHeight = WorldGenerator::getRealHeightAndBiomes(xCoor, yCoor, biomes);
-            
+
             plantInfos[x][y].height = realHeight;
-            for (int z = 0; z < this->chunkDepth - 1; z++)
+            for (int z = 0; z < this->chunkDepth; z++)
             {
                 Vector3 pointPos = originPoint + Vector3(x + 0.5f, y + 0.5f, z + 0.5f) * UnitBlockSize * 1.001;
                 pointPos = Vector3(pointPos.GetX(), pointPos.GetZ(), pointPos.GetY());
 
                 auto blockType = WorldGenerator::getBlockType(xCoor, yCoor, realHeight, biomes, z);
-                bool isEmpty = (blockType == BlocksCount);
-                blocks[x][y][z] = std::move(Block(pointPos, blockType, UnitBlockSize, isEmpty));
+                blocks[x][y][z] = std::move(Block(pointPos, blockType, UnitBlockSize));
             }
 
             if (realHeight <= WorldGenerator::SEA_HEIGHT)
@@ -51,8 +67,8 @@ void Chunk::RandomlyGenerateBlocks()
             }
 
             // generate biomes condition
-            int leafWidth = biomes.TreeHeight/4;
-            leafWidth += (biomes.TreeWidth-1);
+            int leafWidth = biomes.TreeHeight / 4;
+            leafWidth += (biomes.TreeWidth - 1);
             if (random.NextFloat() < biomes.PlantDensity)
             {
                 if (random.NextFloat() > pow(biomes.PlantDensity, 0.5))
@@ -61,22 +77,23 @@ void Chunk::RandomlyGenerateBlocks()
                 }
                 else
                 {
-                    if (biomes.TreeHeight <=0) continue;
-                    if (!(x <= leafWidth-1 || x >= chunkSize - leafWidth || y <= leafWidth-1 || y >= chunkSize - leafWidth))
+                    if (biomes.TreeHeight <= 0) continue;
+                    if (!(x <= leafWidth - 1 || x >= chunkSize - leafWidth || y <= leafWidth - 1 || y >= chunkSize -
+                        leafWidth))
                     {
                         if (plantInfos[x][y].plantType != 0)
                         {
                             continue;
                         }
                         plantInfos[x][y].plantType = 3;
-                        int woodTop = realHeight + biomes.TreeHeight+ (random.NextInt(biomes.TreeHeight/10)) + 2;
+                        int woodTop = realHeight + biomes.TreeHeight + (random.NextInt(biomes.TreeHeight / 10)) + 2;
                         plantInfos[x][y].woodTopHeight = woodTop;
                         int tw = biomes.TreeWidth - 1;
                         for (int i = x - leafWidth; i <= x + leafWidth; i++)
                         {
                             for (int j = y - leafWidth; j <= y + leafWidth; j++)
                             {
-                                if (i <= x+tw && i>=x-tw && j>= y-tw &&j <= y+tw)
+                                if (i <= x + tw && i >= x - tw && j >= y - tw && j <= y + tw)
                                 {
                                     plantInfos[i][j].plantType = 3;
                                     plantInfos[i][j].woodTopHeight = woodTop;
@@ -106,36 +123,39 @@ void Chunk::RandomlyGenerateBlocks()
             {
                 Block& block = blocks[x][y][plantInfos[x][y].height + 1];
                 block.blockType = GrassLeaf;
-                block.isEmpty = false;
                 block.transparent = true;
             }
             if (type == 2)
             {
-                for (int h = plantInfos[x][y].woodTopHeight-3 - random.NextInt(1);
-                    h<=plantInfos[x][y].woodTopHeight - random.NextInt(1);
-                    h++)
+                for (int h = plantInfos[x][y].woodTopHeight - 3 - random.NextInt(1);
+                     h <= plantInfos[x][y].woodTopHeight - random.NextInt(1);
+                     h++)
                 {
+                    if (h >= chunkDepth)
+                    {
+                        continue;
+                    }
                     Block& block = blocks[x][y][h];
-                    if (block.blockType==BlocksCount)
+                    if (block.blockType == Air)
                     {
                         if (random.NextFloat() < 0.7)
                         {
                             block.blockType = Leaf;
-                            block.isEmpty = false;
                         }
-          
                     }
-    
                 }
             }
-            if (type==3)
+            if (type == 3)
             {
                 BlockPlantInfo& info = plantInfos[x][y];
-                for (int h=info.height+1; h<=info.woodTopHeight; h++)
+                for (int h = info.height + 1; h <= info.woodTopHeight; h++)
                 {
+                    if (h >= chunkDepth)
+                    {
+                        continue;
+                    }
                     Block& block = blocks[x][y][h];
-                    block.isEmpty = false;
-                    if (h>=info.woodTopHeight-1)
+                    if (h >= info.woodTopHeight - 1)
                     {
                         block.blockType = Leaf;
                     }
@@ -145,7 +165,7 @@ void Chunk::RandomlyGenerateBlocks()
                     }
                 }
                 auto& blockType = blocks[x][y][info.height].blockType;
-                if (blockType ==Grass || blockType == GrassSnow || blockType==GrassWilt)
+                if (blockType == Grass || blockType == GrassSnow || blockType == GrassWilt)
                 {
                     blockType = Dirt;
                 }
@@ -284,7 +304,7 @@ bool Chunk::FindPickBlockInRange(int minX, int maxX, int minY, int maxY, int min
                 {
                     continue;
                 }
-                if (Intersect(ori, dir, blocks[x][y][z].axisAlignedBox, t))
+                if (Intersect(ori, dir, GetAxisAlignedBox(x, y, z), t))
                 {
                     if (t < WorldMap::minEntityDis)
                     {
@@ -523,7 +543,6 @@ bool Chunk::CheckOutOfRange(int x, int y, int z) const
 
 void Chunk::RenderSingleBlock(int x, int y, int z)
 {
-    count++;
     Block& block = blocks[x][y][z];
     BlockResourceManager::addBlockIntoManager(block.blockType, block.position, block.radius);
 }
@@ -541,7 +560,7 @@ void Chunk::RenderBlocksInRange(int minX, int maxX, int minY, int maxY, int minZ
 
                 if (!block.IsNull()
                     && isAdjacent2OuterAir(x, y, z)
-                    && camera.GetWorldSpaceFrustum().IntersectBoundingBox(block.axisAlignedBox)
+                    && camera.GetWorldSpaceFrustum().IntersectBoundingBox(GetAxisAlignedBox(x,y,z))
                 )
                 {
                     RenderSingleBlock(x, y, z);
@@ -663,14 +682,11 @@ void Chunk::CreateOctreeNode(OctreeNode* & node, int minX, int maxX, int minY, i
         {
             for (int z = minZ; z <= maxZ; z += (maxZ - minZ))
             {
-                Vector3 worldPoint = {originPoint.GetX(), originPoint.GetZ(), originPoint.GetY()};
-                Vector3 minPoint = worldPoint + (Vector3(x, z, y) * UnitBlockSize);
-                Vector3 maxPoint = worldPoint + (Vector3(x + 1, z + 1, y + 1) * UnitBlockSize);
-                box = std::move(box.Union({minPoint, maxPoint}));
+                box.AddBoundingBox(GetAxisAlignedBox(x, y, z));
             }
         }
     }
-    node->box = std::move(box);
+    node->box = box;
 
     if (depth == maxDepth)
     {
@@ -694,7 +710,7 @@ void Chunk::CreateOctreeNode(OctreeNode* & node, int minX, int maxX, int minY, i
 
 void Chunk::OctreeRenderBlocks(OctreeNode* & node, const Camera& camera)
 {
-    AxisAlignedBox box = node->box;
+    AxisAlignedBox& box = node->box;
 
     if (!camera.GetWorldSpaceFrustum().IntersectBoundingBox(box))
     {
@@ -739,24 +755,14 @@ void Chunk::OctreeRenderBlocks(int minX, int maxX, int minY, int maxY, int minZ,
     //check bounding box intersection
     AxisAlignedBox box;
 
-    Block& block1 = blocks[minX][minY][minZ];
-    Block& block2 = blocks[minX][maxY][minZ];
-    Block& block3 = blocks[minX][minY][maxZ];
-    Block& block4 = blocks[minX][maxY][maxZ];
-    Block& block5 = blocks[maxX][minY][minZ];
-    Block& block6 = blocks[maxX][maxY][minZ];
-    Block& block7 = blocks[maxX][minY][maxZ];
-    Block& block8 = blocks[maxX][maxY][maxZ];
-
-
-    box.AddBoundingBox(block1.axisAlignedBox);
-    box.AddBoundingBox(block2.axisAlignedBox);
-    box.AddBoundingBox(block3.axisAlignedBox);
-    box.AddBoundingBox(block4.axisAlignedBox);
-    box.AddBoundingBox(block5.axisAlignedBox);
-    box.AddBoundingBox(block6.axisAlignedBox);
-    box.AddBoundingBox(block7.axisAlignedBox);
-    box.AddBoundingBox(block8.axisAlignedBox);
+    box.AddBoundingBox(GetAxisAlignedBox(minX, minY, minZ));
+    box.AddBoundingBox(GetAxisAlignedBox(minX, maxY, minZ));
+    box.AddBoundingBox(GetAxisAlignedBox(minX, minY, maxZ));
+    box.AddBoundingBox(GetAxisAlignedBox(minX, maxY, maxZ));
+    box.AddBoundingBox(GetAxisAlignedBox(maxX, minY, minZ));
+    box.AddBoundingBox(GetAxisAlignedBox(maxX, maxY, minZ));
+    box.AddBoundingBox(GetAxisAlignedBox(maxX, minY, maxZ));
+    box.AddBoundingBox(GetAxisAlignedBox(maxX, maxY, maxZ));
 
     if (!camera.GetWorldSpaceFrustum().IntersectBoundingBox(box))
     {
@@ -795,7 +801,6 @@ void Chunk::OctreeRenderBlocks(int minX, int maxX, int minY, int maxY, int minZ,
 bool Chunk::Render(const Camera& camera, GraphicsContext& context)
 {
     // blocksRenderedVector.clear();
-    count = 0;
     if (EnableOctree)
     {
         if (EnableOctreeCompute)
@@ -809,7 +814,6 @@ bool Chunk::Render(const Camera& camera, GraphicsContext& context)
     }
     else
     {
-        count = 0;
         for (int x = 0; x < chunkSize; x++)
         {
             for (int y = 0; y < chunkSize; y++)
@@ -817,12 +821,23 @@ bool Chunk::Render(const Camera& camera, GraphicsContext& context)
                 for (int z = 0; z < chunkDepth; z++)
                 {
                     Block& block = blocks[x][y][z];
-                    if (!block.IsNull()
-                        && block.adjacent2Air
-                        //&& camera.GetWorldSpaceFrustum().IntersectBoundingBox(block.axisAlignedBox)
-                    )
+                    if (EnableBoxDetect)
                     {
-                        RenderSingleBlock(x, y, z);
+                        if (!block.IsNull()
+                            && block.adjacent2Air
+                            && (camera.GetWorldSpaceFrustum().IntersectBoundingBox(GetAxisAlignedBox(x, y, z)))
+                        )
+                        {
+                            RenderSingleBlock(x, y, z);
+                        }
+                    }
+                    else
+                    {
+                        if (!block.IsNull()
+                            && block.adjacent2Air)
+                        {
+                            RenderSingleBlock(x, y, z);
+                        }
                     }
                 }
             }

@@ -68,7 +68,7 @@ namespace WorldGenerator
         }
         if (z > height)
         {
-            return BlocksCount;
+            return Air;
         }
 
         //dig out caves

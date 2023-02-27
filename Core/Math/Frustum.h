@@ -47,8 +47,8 @@ namespace Math
 
         // We don't officially have a AxisAlignedBox class yet, but let's assume it's forthcoming.  (There is a
         // simple struct in the Model project.)
-        bool IntersectBoundingBox(const AxisAlignedBox& aabb) const;
-        bool ContainingBoundingBox(const AxisAlignedBox& aabb) const;
+        bool IntersectBoundingBox(const AxisAlignedBox aabb) const;
+        bool ContainingBoundingBox(const AxisAlignedBox aabb) const;
 
         friend Frustum  operator* ( const OrthogonalTransform& xform, const Frustum& frustum );	// Fast
         friend Frustum  operator* ( const AffineTransform& xform, const Frustum& frustum );		// Slow
@@ -92,7 +92,7 @@ namespace Math
         return true;
     }
 
-    inline bool Frustum::IntersectBoundingBox(const AxisAlignedBox& aabb) const
+    inline bool Frustum::IntersectBoundingBox(const AxisAlignedBox aabb) const
     {
         for (int i = 0; i < 6; ++i)
         {
@@ -105,7 +105,7 @@ namespace Math
         return true;
     }
 
-    inline bool Frustum::ContainingBoundingBox(const AxisAlignedBox& aabb) const
+    inline bool Frustum::ContainingBoundingBox(const AxisAlignedBox aabb) const
     {
         for (int i=0;i<6;++i)
         {

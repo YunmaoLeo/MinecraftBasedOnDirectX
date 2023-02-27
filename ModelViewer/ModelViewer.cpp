@@ -102,8 +102,6 @@ void ChangeIBLBias(EngineVar::ActionType);
 DynamicEnumVar g_IBLSet("Viewer/Lighting/Environment", ChangeIBLSet);
 std::vector<std::pair<TextureRef, TextureRef>> g_IBLTextures;
 NumVar g_IBLBias("Viewer/Lighting/Gloss Reduction", 2.0f, 0.0f, 10.0f, 1.0f, ChangeIBLBias);
-ThreadPool thread_pool(25);
-vector<std::future<bool>> threadResultVector;
 
 void ChangeIBLSet(EngineVar::ActionType)
 {
@@ -188,7 +186,8 @@ void ModelViewer::PickItem(int sx, int sy)
 void ModelViewer::Startup(void)
 {
     // 初始化动态模糊
-    SimplexNoise::setSeed(23);
+    std::cout <<"Sizeof Block: " << sizeof(Block) << std::endl;
+    SimplexNoise::setSeed(20);
     MotionBlur::Enable = true;
 
     TemporalEffects::EnableTAA = true;
@@ -223,7 +222,7 @@ void ModelViewer::Startup(void)
     }
     else
     {
-        worldMap = new WorldMap(9,16,25);
+        worldMap = new WorldMap(23,16,3);
         
         // world_block = WorldBlock(Vector3(0, 0, 0), 16);
         MotionBlur::Enable = false;
@@ -231,6 +230,7 @@ void ModelViewer::Startup(void)
     }
 
     m_Camera.SetZRange(1.0f, 10000.0f);
+    m_Camera.SetPosition({0,128.0f*World::UnitBlockSize, 0});
     if (gltfFileName.size() == 0)
     {
         m_CameraController.reset(new FlyingFPSCamera(m_Camera, Vector3(kYUnitVector)));
@@ -321,12 +321,13 @@ void ModelViewer::Update(float deltaT)
 void ModelViewer::RenderBlocks(MeshSorter& sorter, MeshSorter::DrawPass pass, GraphicsContext& context,
                                GlobalConstants& globals)
 {
-    for (int i = 0; i < BlockResourceManager::BlockType::BlocksCount; i++)
+    for (int i = 0; i < BlockResourceManager::BlockType::Air; i++)
     {
         auto type = static_cast<BlockResourceManager::BlockType>(i);
         sorter.ClearMeshes();
         sorter.currentBlockType = type;
         BlockResourceManager::getBlockRef(type).Render(sorter);
+        sorter.Sort();
         sorter.RenderMeshes(pass, context, globals);
     }
 }
@@ -334,7 +335,7 @@ void ModelViewer::RenderBlocks(MeshSorter& sorter, MeshSorter::DrawPass pass, Gr
 void ModelViewer::RenderShadowBlocks(MeshSorter& sorter, MeshSorter::DrawPass pass, GraphicsContext& context,
                                      GlobalConstants& globals, Matrix4 matrix)
 {
-    for (int i = 0; i < BlockResourceManager::BlockType::BlocksCount; i++)
+    for (int i = 0; i < BlockResourceManager::BlockType::Air; i++)
     {
         auto type = static_cast<BlockResourceManager::BlockType>(i);
         sorter.ClearMeshes();
@@ -347,7 +348,6 @@ void ModelViewer::RenderShadowBlocks(MeshSorter& sorter, MeshSorter::DrawPass pa
 
 void ModelViewer::RenderScene(void)
 {
-    threadResultVector.clear();
     GraphicsContext& gfxContext = GraphicsContext::Begin(L"Scene Render");
     uint32_t FrameIndex = TemporalEffects::GetFrameIndexMod2();
     const D3D12_VIEWPORT& viewport = m_MainViewport;
@@ -398,11 +398,11 @@ void ModelViewer::RenderScene(void)
     SSAO::Render(gfxContext, m_Camera);
     if (!SSAO::DebugDraw)
     {
-        ScopedTimer _outerprof(L"Main Render", gfxContext);
+        ScopedTimer _outerprof(L"Mainh Render", gfxContext);
 
-        {
+        {   
             ScopedTimer _prof(L"Sun Shadow Map", gfxContext);
-
+        
             MeshSorter shadowSorter(MeshSorter::kShadows);
             shadowSorter.SetCamera(m_Camera);
             shadowSorter.SetDepthStencilTarget(g_ShadowBuffer);

@@ -14,7 +14,7 @@ public:
     {
     }
 
-    Block(Math::Vector3& position, BlockResourceManager::BlockType type, float sideSize, bool empty);
+    Block(Math::Vector3& position, BlockResourceManager::BlockType type, float sideSize);
     Block& operator=(const Block& block);
 
 
@@ -27,17 +27,15 @@ public:
     }
 
     bool IsNull();
-
-    float sideSize;
-    float radius;
-    bool isEmpty = true;
+    
+    Math::Vector3 position{};
+    float sideSize=0;
+    float radius=0;
+    BlockResourceManager::BlockType blockType;
     bool hasCheckSibling = false;
     bool isEdgeBlock = false;
     bool transparent = false;
     bool adjacent2Air = false;
-    Math::Vector3 position;
-    BlockResourceManager::BlockType blockType;
-    Math::AxisAlignedBox axisAlignedBox;
 
 private:
 };
