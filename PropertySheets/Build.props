@@ -20,9 +20,9 @@
 	  <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
 <!--      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>-->
       <MinimalRebuild>false</MinimalRebuild>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Disabled</Optimization>
       <BufferSecurityCheck>true</BufferSecurityCheck>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
 	  <FunctionLevelLinking>true</FunctionLevelLinking>
 	</ClCompile>
 	<ClCompile Condition="'$(Configuration)'=='Profile'">
@@ -35,7 +35,6 @@
 	<ClCompile Condition="'$(Configuration)'=='Release'">
       <PreprocessorDefinitions>NDEBUG;RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
-        <BufferSecurityCheck>true</BufferSecurityCheck>
       <Optimization>MaxSpeed</Optimization>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
 	  <FunctionLevelLinking>true</FunctionLevelLinking>

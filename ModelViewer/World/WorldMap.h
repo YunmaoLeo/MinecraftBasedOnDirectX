@@ -50,8 +50,8 @@ private:
     BlockPosition getPositionOfCamera(Math::Vector3& position);
     Vector3 mapOriginPoint;
     ThreadPool* thread_pool;
-    std::vector<std::future<bool>> threadResultVector;
-    std::unordered_set<BlockPosition, hashName> BlocksCreating;
+    std::vector<std::future<bool>> threadResultVector{};
+    std::unordered_set<BlockPosition, hashName> BlocksCreating{};
     int UnitAreaSize;
     int RenderAreaCount;
     std::unordered_map<BlockPosition, Chunk*, hashName>* worldMap{};

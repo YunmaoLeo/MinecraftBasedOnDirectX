@@ -222,7 +222,7 @@ void ModelViewer::Startup(void)
     }
     else
     {
-        worldMap = new WorldMap(23,16,3);
+        worldMap = new WorldMap(23,16,2);
         
         // world_block = WorldBlock(Vector3(0, 0, 0), 16);
         MotionBlur::Enable = false;

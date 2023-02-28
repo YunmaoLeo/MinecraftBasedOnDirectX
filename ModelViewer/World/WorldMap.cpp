@@ -30,7 +30,7 @@ WorldMap::WorldMap(int renderAreaCount, int unitAreaSize, int threadCount)
             // BlockPosition pos{x, y};
             threadResultVector.emplace_back(thread_pool->enqueue([=]
             {
-                bool result = createUnitWorldBlock({x,y});
+                bool result = createUnitWorldBlock({x, y});
                 return result;
             }));
         }
@@ -51,7 +51,7 @@ bool WorldMap::createUnitWorldBlock(BlockPosition pos)
     block->posY = y;
     worldMap->emplace(BlockPosition{x, y}, block);
     auto end = GetTickCount();
-    std:: cout << "world block generate time: "<< end-start << "ms"<<std::endl;
+    std::cout << "world block generate time: " << end - start << "ms" << std::endl;
     return true;
 }
 
@@ -59,8 +59,8 @@ void WorldMap::PutBlock(Vector3& ori, Vector3& dir, BlockResourceManager::BlockT
 {
     Block* empty = nullptr;
     Block* entity = nullptr;
-    FindPickBlock(ori,dir,empty, entity);
-    if (empty!=nullptr)
+    FindPickBlock(ori, dir, empty, entity);
+    if (empty != nullptr)
     {
         empty->blockType = type;
         empty->adjacent2Air = true;
@@ -71,15 +71,15 @@ void WorldMap::DeleteBlock(Vector3& ori, Vector3& dir)
 {
     Block* empty = nullptr;
     Block* entity = nullptr;
-    FindPickBlock(ori,dir,empty, entity);
-    if (entity!=nullptr)
+    FindPickBlock(ori, dir, empty, entity);
+    if (entity != nullptr)
     {
         entity->blockType = Air;
         entity->adjacent2Air = false;
 
         Chunk* worldBlock = worldMap->at(BlockPosition{entityBlockX, entityBlockY});
-        auto siblings = worldBlock->getSiblingBlocks(entityX,entityY, entityZ);
-        for (auto sibling:siblings)
+        auto siblings = worldBlock->getSiblingBlocks(entityX, entityY, entityZ);
+        for (auto sibling : siblings)
         {
             if (sibling && !sibling->IsNull())
             {
@@ -98,14 +98,14 @@ void WorldMap::FindPickBlock(Vector3& ori, Vector3& dir, Block*& empty, Block*& 
     }
 
     Chunk* worldBlock = worldMap->at(BlockPosition{entityBlockX, entityBlockY});
-    auto siblings = worldBlock->getSiblingBlocks(entityX,entityY, entityZ);
-    
+    auto siblings = worldBlock->getSiblingBlocks(entityX, entityY, entityZ);
+
     float t;
     float minT = INT_MAX;
     for (auto sibling : siblings)
     {
         if (sibling && sibling->IsNull()
-            && Chunk::Intersect(ori,dir,Chunk::GetScaledSizeAxisBox(sibling->position), t))
+            && Chunk::Intersect(ori, dir, Chunk::GetScaledSizeAxisBox(sibling->position), t))
         {
             if (t < minT && t < minEntityDis)
             {
@@ -120,7 +120,7 @@ void WorldMap::updateBlockNeedRender(Vector3 position)
 {
     BlockPosition pos = getPositionOfCamera(position);
     BlocksNeedRender.clear();
-    
+
     initBufferArea(pos);
 
     for (int x = pos.x - (RenderAreaCount / 2); x <= pos.x + RenderAreaCount / 2; x++)
@@ -159,8 +159,14 @@ void WorldMap::renderVisibleBlocks(Camera& camera, GraphicsContext& context)
             bool result = block->Render(camera, context);
             return result;
         }));
+        // auto res = thread_pool->enqueue([&]
+        // {
+        //     bool result = block->Render(camera, context);
+        //     return result;
+        // });
+        // res.wait();
     }
-
+    //
     waitThreadsWorkDone();
 }
 
@@ -174,12 +180,12 @@ void WorldMap::waitThreadsWorkDone()
 
 Chunk* WorldMap::getWorldBlockRef(int x, int y)
 {
-        return worldMap->at(BlockPosition{x,y});
+    return worldMap->at(BlockPosition{x, y});
 }
 
 bool WorldMap::hasBlock(int x, int y)
 {
-    return worldMap->find(BlockPosition{x,y})!=worldMap->end();
+    return worldMap->find(BlockPosition{x, y}) != worldMap->end();
 }
 
 void WorldMap::initBufferArea(BlockPosition pos)
@@ -189,9 +195,9 @@ void WorldMap::initBufferArea(BlockPosition pos)
     {
         for (int y = pos.y - (renderCount / 2); y <= pos.y + renderCount / 2; y++)
         {
-            BlockPosition blockPos{x,y};
-            if (worldMap->find(blockPos)!=worldMap->end()
-                || BlocksCreating.find(blockPos)!=BlocksCreating.end())
+            BlockPosition blockPos{x, y};
+            if (worldMap->find(blockPos) != worldMap->end()
+                || BlocksCreating.find(blockPos) != BlocksCreating.end())
             {
                 continue;
             }

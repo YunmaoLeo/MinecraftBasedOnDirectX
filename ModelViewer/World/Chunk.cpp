@@ -824,7 +824,7 @@ bool Chunk::Render(const Camera& camera, GraphicsContext& context)
                     if (EnableBoxDetect)
                     {
                         if (!block.IsNull()
-                            && block.adjacent2Air
+                            && isAdjacent2OuterAir(x,y,z)
                             && (camera.GetWorldSpaceFrustum().IntersectBoundingBox(GetAxisAlignedBox(x, y, z)))
                         )
                         {
@@ -834,7 +834,7 @@ bool Chunk::Render(const Camera& camera, GraphicsContext& context)
                     else
                     {
                         if (!block.IsNull()
-                            && block.adjacent2Air)
+                            && isAdjacent2OuterAir(x,y,z))
                         {
                             RenderSingleBlock(x, y, z);
                         }

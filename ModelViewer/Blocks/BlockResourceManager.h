@@ -60,7 +60,7 @@ namespace BlockResourceManager
     }
     void clearVisibleBlocks();
 
-    void addBlockIntoManager(BlockType& blockType, Math::Vector3& position, float& radius);
+    void addBlockIntoManager(BlockType blockType, Math::Vector3 position, float radius);
 
     void initBlocks();
 
@@ -79,6 +79,7 @@ namespace BlockResourceManager
         std::vector<InstanceData> InstanceVector{};
         std::unique_ptr<UtilUploadBuffer<InstanceData>> InstanceBuffer = nullptr;
         uint32_t visibleBlockNumber = 0;
+        std::mutex mtx;
 
         InstancesManager()
         {
