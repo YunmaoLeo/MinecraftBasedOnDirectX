@@ -1,7 +1,3 @@
----
-theme: devui-blue
-highlight: atelier-forest-light
----
 # 前言
 ## 1. 基于文中方法实现的效果预览：
 + 平原
