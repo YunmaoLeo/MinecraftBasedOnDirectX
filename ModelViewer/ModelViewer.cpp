@@ -86,9 +86,9 @@ private:
     ShadowCamera m_SunShadow;
 };
 
-NumVar ShadowDimX("Sponza/Lighting/Shadow Dim X", 5000, 1000, 10000, 100);
-NumVar ShadowDimY("Sponza/Lighting/Shadow Dim Y", 3000, 1000, 10000, 100);
-NumVar ShadowDimZ("Sponza/Lighting/Shadow Dim Z", 3000, 1000, 10000, 100);
+NumVar ShadowDimX("Sponza/Lighting/Shadow Dim X", 10000, 1000, 10000, 100);
+NumVar ShadowDimY("Sponza/Lighting/Shadow Dim Y", 10000, 1000, 10000, 100);
+NumVar ShadowDimZ("Sponza/Lighting/Shadow Dim Z", 10000, 1000, 10000, 100);
 CREATE_APPLICATION(ModelViewer)
 
 ExpVar g_SunLightIntensity("Viewer/Lighting/Sun Light Intensity", 4.0f, 0.0f, 16.0f, 0.1f);
@@ -148,6 +148,7 @@ void LoadIBLTextures()
             std::wstring specularFile = baseFile + L"_specularIBL.dds";
 
             TextureRef diffuseTex = TextureManager::LoadDDSFromFile(L"Textures/" + diffuseFile);
+            std::wcout <<"find skybox texture: "<< baseFile << std::endl;
             if (diffuseTex.IsValid())
             {
                 TextureRef specularTex = TextureManager::LoadDDSFromFile(L"Textures/" + specularFile);
@@ -206,7 +207,7 @@ void ModelViewer::Startup(void)
 
     std::wstring gltfFileName;
 
-    bool forceRebuild = false;
+    bool forceRebuild = true;
     uint32_t rebuildValue;
     if (CommandLineArgs::GetInteger(L"rebuild", rebuildValue))
         forceRebuild = rebuildValue != 0;
@@ -222,14 +223,14 @@ void ModelViewer::Startup(void)
     }
     else
     {
-        worldMap = new WorldMap(23,16,2);
+        worldMap = new WorldMap(27,16,2);
         
         // world_block = WorldBlock(Vector3(0, 0, 0), 16);
         MotionBlur::Enable = false;
         //Lighting::CreateRandomLights(m_ModelInst.m_Model->m_BoundingBox.GetMin(),m_ModelInst.m_Model->m_BoundingBox.GetMax());
     }
 
-    m_Camera.SetZRange(1.0f, 10000.0f);
+    m_Camera.SetZRange(1.0f, 15000.0f);
     m_Camera.SetPosition({0,128.0f*World::UnitBlockSize, 0});
     if (gltfFileName.size() == 0)
     {
@@ -398,7 +399,7 @@ void ModelViewer::RenderScene(void)
     SSAO::Render(gfxContext, m_Camera);
     if (!SSAO::DebugDraw)
     {
-        ScopedTimer _outerprof(L"Mainh Render", gfxContext);
+        ScopedTimer _outerprof(L"Main Render", gfxContext);
 
         {   
             ScopedTimer _prof(L"Sun Shadow Map", gfxContext);
@@ -426,10 +427,6 @@ void ModelViewer::RenderScene(void)
         
         RenderBlocks(sorter, MeshSorter::kTransparent, gfxContext, globals);
     }
-    {
-        ScopedTimer _prof(L"CheckOcclusionRender", gfxContext);
-    }
-
     gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_COPY_SOURCE);
     // Some systems generate a per-pixel velocity buffer to better track dynamic and skinned meshes.  Everything
     // is static in our scene, so we generate velocity from camera motion and the depth buffer.  A velocity buffer
@@ -439,8 +436,7 @@ void ModelViewer::RenderScene(void)
     TemporalEffects::ResolveImage(gfxContext);
 
     //ParticleEffectManager::Render(gfxContext, m_Camera, g_SceneColorBuffer, g_SceneDepthBuffer,  g_LinearDepth[FrameIndex]);
-
-    // Until I work out how to couple these two, it's "either-or".
+    
     if (DepthOfField::Enable)
         DepthOfField::Render(gfxContext, m_Camera.GetNearClip(), m_Camera.GetFarClip());
     else

@@ -4,7 +4,6 @@
         "version" : "2.0"
     },
     "extensionsUsed" : [
-        "KHR_materials_specular",
         "KHR_materials_ior"
     ],
     "scene" : 0,
@@ -34,7 +33,7 @@
                     ]
                 },
                 "KHR_materials_ior" : {
-                    "ior" : 1.4500000476837158
+                    "ior" : 0
                 }
             },
             "name" : "Material.001",
@@ -72,7 +71,7 @@
         {
             "mimeType" : "image/png",
             "name" : "lambert6_baseColor-modified",
-            "uri" : "textures/lambert6_baseColor-modified.png"
+            "uri" : "texture/lambert6_baseColor-modified.png"
         }
     ],
     "accessors" : [

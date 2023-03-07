@@ -301,8 +301,8 @@ float4 main(VSOutput vsOutput) : SV_Target0
 
     // Old-school ambient light
     // Add IBL
-    colorAccum += Diffuse_IBL(Surface);
-    colorAccum += Specular_IBL(Surface);
+    // colorAccum += Diffuse_IBL(Surface) * 0.3;
+    // colorAccum += Specular_IBL(Surface) * 0.3;
 
 #else
 

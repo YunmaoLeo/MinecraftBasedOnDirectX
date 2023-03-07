@@ -159,14 +159,7 @@ void WorldMap::renderVisibleBlocks(Camera& camera, GraphicsContext& context)
             bool result = block->Render(camera, context);
             return result;
         }));
-        // auto res = thread_pool->enqueue([&]
-        // {
-        //     bool result = block->Render(camera, context);
-        //     return result;
-        // });
-        // res.wait();
     }
-    //
     waitThreadsWorkDone();
 }
 

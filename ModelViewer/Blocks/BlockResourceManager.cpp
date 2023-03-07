@@ -47,10 +47,9 @@ void BlockResourceManager::clearVisibleBlocks()
 
 void BlockResourceManager::addBlockIntoManager(BlockType blockType, Math::Vector3 position, float radius)
 {
-
     InstancesManager* manager = BlocksInstancesManagerMap[blockType];
     
-    InstanceData data;
+    InstanceData data{};
     
     Math::Matrix4 worldMatrix(Math::kIdentity);
     Math::UniformTransform locator(Math::kIdentity);
@@ -71,9 +70,9 @@ void BlockResourceManager::addBlockIntoManager(BlockType blockType, Math::Vector
     }
     manager->InstanceBuffer.get()->CopyData(manager->visibleBlockNumber, data);
     manager->visibleBlockNumber++;
+    std::atomic_signal_fence(std::memory_order_release);
     manager->mtx.unlock();
 }
-
 void BlockResourceManager::initBlocks()
 {
     //read resources according to BlockType enum list;

@@ -540,7 +540,6 @@ bool Chunk::CheckOutOfRange(int x, int y, int z) const
 {
     return x < 0 || x >= chunkSize || y < 0 || y >= chunkSize || z < 0 || z >= chunkDepth;
 }
-
 void Chunk::RenderSingleBlock(int x, int y, int z)
 {
     Block& block = blocks[x][y][z];
