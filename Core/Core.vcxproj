@@ -97,14 +97,17 @@
     <ClInclude Include="Math\BoundingSphere.h" />
     <ClInclude Include="Math\Common.h" />
     <ClInclude Include="Math\Frustum.h" />
+    <ClInclude Include="Math\MathHelper.h" />
     <ClInclude Include="Math\Matrix3.h" />
     <ClInclude Include="Math\Matrix4.h" />
+    <ClInclude Include="Math\PerlinNoise.h" />
     <ClInclude Include="Math\Quaternion.h" />
     <ClInclude Include="Math\Random.h" />
     <ClInclude Include="Math\Scalar.h" />
     <ClInclude Include="Math\Transform.h" />
     <ClInclude Include="Math\Vector.h" />
     <ClInclude Include="MotionBlur.h" />
+    <ClInclude Include="OctreeNode.h" />
     <ClInclude Include="ParticleEffect.h" />
     <ClInclude Include="ParticleEffectManager.h" />
     <ClInclude Include="ParticleEffectProperties.h" />
@@ -120,14 +123,17 @@
     <ClInclude Include="SamplerManager.h" />
     <ClInclude Include="ShadowBuffer.h" />
     <ClInclude Include="ShadowCamera.h" />
+    <ClInclude Include="SimplexNoise.h" />
     <ClInclude Include="SSAO.h" />
     <ClInclude Include="SystemTime.h" />
     <ClInclude Include="TemporalEffects.h" />
     <ClInclude Include="TextRenderer.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="TextureManager.h" />
+    <ClInclude Include="ThreadPool.h" />
     <ClInclude Include="UploadBuffer.h" />
     <ClInclude Include="Utility.h" />
+    <ClInclude Include="UtilUploadBuffer.h" />
     <ClInclude Include="Util\CommandLineArg.h" />
     <ClInclude Include="VectorMath.h" />
   </ItemGroup>
@@ -163,8 +169,11 @@
     <ClCompile Include="LinearAllocator.cpp" />
     <ClCompile Include="Math\BoundingSphere.cpp" />
     <ClCompile Include="Math\Frustum.cpp" />
+    <ClCompile Include="Math\MathHelper.cpp" />
+    <ClCompile Include="Math\PerlinNoise.cpp" />
     <ClCompile Include="Math\Random.cpp" />
     <ClCompile Include="MotionBlur.cpp" />
+    <ClCompile Include="OctreeNode.cpp" />
     <ClCompile Include="ParticleEffect.cpp" />
     <ClCompile Include="ParticleEffectManager.cpp" />
     <ClCompile Include="ParticleEmissionProperties.cpp" />
@@ -180,14 +189,17 @@
     <ClCompile Include="SamplerManager.cpp" />
     <ClCompile Include="ShadowBuffer.cpp" />
     <ClCompile Include="ShadowCamera.cpp" />
+    <ClCompile Include="SimplexNoise.cpp" />
     <ClCompile Include="SSAO.cpp" />
     <ClCompile Include="SystemTime.cpp" />
     <ClCompile Include="TemporalEffects.cpp" />
     <ClCompile Include="TextRenderer.cpp" />
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="TextureManager.cpp" />
+    <ClCompile Include="ThreadPool.cpp" />
     <ClCompile Include="UploadBuffer.cpp" />
     <ClCompile Include="Utility.cpp" />
+    <ClCompile Include="UtilUploadBuffer.cpp" />
     <ClCompile Include="Util\CommandLineArg.cpp" />
   </ItemGroup>
   <ItemGroup>

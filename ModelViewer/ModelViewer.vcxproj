@@ -59,8 +59,10 @@
     <ClCompile Include="Blocks\Block.cpp" />
     <ClCompile Include="Blocks\BlockResourceManager.cpp" />
     <ClCompile Include="ModelViewer.cpp" />
+    <ClCompile Include="World\WorldGenerator.cpp" />
+    <ClCompile Include="World\WorldMap.cpp" />
     <ClCompile Include="World\World.cpp" />
-    <ClCompile Include="World\WorldBlock.cpp" />
+    <ClCompile Include="World\Chunk.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Core/Core.vcxproj">
@@ -127,8 +129,10 @@
   <ItemGroup>
     <ClInclude Include="Blocks\Block.h" />
     <ClInclude Include="Blocks\BlockResourceManager.h" />
+    <ClInclude Include="World\WorldGenerator.h" />
+    <ClInclude Include="World\WorldMap.h" />
     <ClInclude Include="World\World.h" />
-    <ClInclude Include="World\WorldBlock.h" />
+    <ClInclude Include="World\Chunk.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ItemDefinitionGroup>

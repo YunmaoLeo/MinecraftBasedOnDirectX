@@ -24,6 +24,8 @@
 #include <array>
 #include <iostream>
 
+#include "BufferManager.h"
+
 using namespace Graphics;
 using namespace GraphRenderer;
 using namespace Math;
@@ -463,6 +465,10 @@ namespace EngineProfiling
 
         Text.DrawFormattedString( "CPU %7.3f ms, GPU %7.3f ms, %3u Hz\n",
             cpuTime, gpuTime, (uint32_t)(frameRate + 0.5f));
+
+        Text.SetCursorX(g_SceneColorBuffer.GetWidth()/2);
+        Text.SetCursorY(g_SceneColorBuffer.GetHeight()/2);
+        Text.DrawFormattedString("X");
     }
 
     void DisplayPerfGraph( GraphicsContext& Context )

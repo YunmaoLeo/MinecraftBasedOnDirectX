@@ -17,11 +17,7 @@
 //#undef ENABLE_SKINNING
 #endif
 
-cbuffer MeshConstants : register(b0)
-{
-    float4x4 WorldMatrix;   // Object to world
-    float3x3 WorldIT;       // Object normal to world normal
-};
+StructuredBuffer<InstanceData> gInstanceData: register(t0, space2);
 
 cbuffer GlobalConstants : register(b1)
 {
@@ -74,11 +70,14 @@ struct VSOutput
     float3 sunShadowCoord : TEXCOORD3;
 };
 
-[RootSignature(Renderer_RootSig)]
-VSOutput main(VSInput vsInput)
+// [RootSignature(Renderer_RootSig)]
+VSOutput main(VSInput vsInput, uint instanceID : SV_InstanceID)
 {
-    VSOutput vsOutput;
+    VSOutput vsOutput = (VSOutput)0.0f;
 
+    InstanceData instData = gInstanceData[instanceID];
+    float4x4 WorldMatrix = instData.WorldMatrix;
+    float3x3 WorldIT = instData.WorldIT;
     float4 position = float4(vsInput.position, 1.0);
     float3 normal = vsInput.normal * 2 - 1;
 #ifndef NO_TANGENT_FRAME
@@ -109,7 +108,6 @@ VSOutput main(VSInput vsInput)
 #endif
 
 #endif
-
     vsOutput.worldPos = mul(WorldMatrix, position).xyz;
     vsOutput.position = mul(ViewProjMatrix, float4(vsOutput.worldPos, 1.0));
     vsOutput.sunShadowCoord = mul(SunShadowMatrix, float4(vsOutput.worldPos, 1.0)).xyz;

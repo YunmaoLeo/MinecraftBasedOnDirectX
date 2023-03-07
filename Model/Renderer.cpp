@@ -20,11 +20,13 @@
 #include "TextureManager.h"
 #include "ConstantBuffers.h"
 #include "LightManager.h"
+#include "UtilUploadBuffer.h"
 #include "../Core/RootSignature.h"
 #include "../Core/PipelineState.h"
 #include "../Core/GraphicsCommon.h"
 #include "../Core/BufferManager.h"
 #include "../Core/ShadowCamera.h"
+#include "../ModelViewer/Blocks/BlockResourceManager.h"
 
 #include "CompiledShaders/DefaultVS.h"
 #include "CompiledShaders/DefaultSkinVS.h"
@@ -57,7 +59,8 @@ using namespace Renderer;
 namespace Renderer
 {
     BoolVar SeparateZPass("Renderer/Separate Z Pass", true);
-
+    BoolVar EnableOcclusion("Model/EnableOcclusion", false);
+    NumVar ModelCount("Model/ModelCount", 1, 1, 125, 1);
     bool s_Initialized = false;
 
     DescriptorHeap s_TextureHeap;
@@ -78,6 +81,14 @@ namespace Renderer
 
     DescriptorHandle m_CommonTextures;
 }
+
+D3D12_INPUT_ELEMENT_DESC posOnly[] =
+{
+    {
+        "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,
+        D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0
+    },
+};
 
 void Renderer::Initialize(void)
 {
@@ -104,6 +115,7 @@ void Renderer::Initialize(void)
         InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 10, 10, D3D12_SHADER_VISIBILITY_PIXEL);
     m_RootSig[kCommonCBV].InitAsConstantBuffer(1);
     m_RootSig[kSkinMatrices].InitAsBufferSRV(20, D3D12_SHADER_VISIBILITY_VERTEX);
+    m_RootSig[kInstanceData].InitAsBufferSRV(0, D3D12_SHADER_VISIBILITY_VERTEX, 2);
     m_RootSig.Finalize(L"RootSig", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
     DXGI_FORMAT ColorFormat = g_SceneColorBuffer.GetFormat();
@@ -448,6 +460,7 @@ uint8_t Renderer::GetPSO(uint16_t psoFlags)
 
     if (psoFlags & kAlphaBlend)
     {
+        std::cout << "has AlphaBlend" << std::endl;
         ColorPSO.SetBlendState(BlendPreMultiplied);
         ColorPSO.SetDepthStencilState(DepthStateReadOnly);
     }
@@ -607,11 +620,11 @@ void MeshSorter::RenderMeshesForOcclusion(
     context.SetPrimitiveTopology(SetTopologyTypeToLine
                                      ? D3D_PRIMITIVE_TOPOLOGY_LINELIST
                                      : D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    context.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, s_TextureHeap.GetHeapPointer());
-    context.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, s_SamplerHeap.GetHeapPointer());
-
-    // Set common textures
-    context.SetDescriptorTable(kCommonSRVs, m_CommonTextures);
+    // context.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, s_TextureHeap.GetHeapPointer());
+    // context.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, s_SamplerHeap.GetHeapPointer());
+    //
+    // // Set common textures
+    // context.SetDescriptorTable(kCommonSRVs, m_CommonTextures);
 
     // Set common shader constants
     globals.ViewProjMatrix = m_Camera->GetViewProjMatrix();
@@ -642,7 +655,7 @@ void MeshSorter::RenderMeshesForOcclusion(
             continue;
 
         context.TransitionResource(*m_DSV, D3D12_RESOURCE_STATE_DEPTH_READ);
-        context.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        // context.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
         context.SetRenderTarget(g_SceneColorBuffer.GetRTV(), m_DSV->GetDSV_DepthReadOnly());
 
         context.SetViewportAndScissor(m_Viewport, m_Scissor);
@@ -672,8 +685,6 @@ void MeshSorter::RenderMeshesForOcclusion(
             m_OcclusionPSO.SetDepthStencilState(DepthStateReadOnly);
             m_OcclusionPSO.Finalize();
             context.SetPipelineState(m_OcclusionPSO);
-
-
             context.SetVertexBuffer(0, {object.bufferPtr + mesh.vbOffset, mesh.vbSize, mesh.vbStride});
 
             context.SetIndexBuffer({object.bufferPtr + mesh.ibOffset, mesh.ibSize, (DXGI_FORMAT)mesh.ibFormat});
@@ -682,7 +693,6 @@ void MeshSorter::RenderMeshesForOcclusion(
             {
                 context.DrawIndexed(mesh.draw[i].primCount, mesh.draw[i].startIndex, mesh.draw[i].baseVertex);
             }
-
             ++m_CurrentDraw;
         }
     }
@@ -694,7 +704,11 @@ void MeshSorter::RenderMeshes(
     GlobalConstants& globals)
 {
     ASSERT(m_DSV != nullptr);
-
+    BlockResourceManager::InstancesManager& manager = BlockResourceManager::getManager(currentBlockType);
+    if (manager.visibleBlockNumber == 0)
+    {
+        return;
+    }
     Renderer::UpdateGlobalDescriptors();
 
 
@@ -702,6 +716,10 @@ void MeshSorter::RenderMeshes(
     context.SetPrimitiveTopology(SetTopologyTypeToLine
                                      ? D3D_PRIMITIVE_TOPOLOGY_LINELIST
                                      : D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    context.GetCommandList()->SetGraphicsRootShaderResourceView(kInstanceData,
+                                                                manager.InstanceBuffer->Resource()->
+                                                                        GetGPUVirtualAddress());
     context.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, s_TextureHeap.GetHeapPointer());
     context.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, s_SamplerHeap.GetHeapPointer());
 
@@ -809,7 +827,7 @@ void MeshSorter::RenderMeshes(
             const SortObject& object = m_SortObjects[key.objectIdx];
             const Mesh& mesh = *object.mesh;
 
-            context.SetConstantBuffer(kMeshConstants, object.meshCBV);
+            //context.SetConstantBuffer(kMeshConstants, object.meshCBV);
             context.SetConstantBuffer(kMaterialConstants, object.materialCBV);
             context.SetDescriptorTable(kMaterialSRVs, s_TextureHeap[mesh.srvTable]);
             context.SetDescriptorTable(kMaterialSamplers, s_SamplerHeap[mesh.samplerTable]);
@@ -834,12 +852,21 @@ void MeshSorter::RenderMeshes(
             }
 
             context.SetIndexBuffer({object.bufferPtr + mesh.ibOffset, mesh.ibSize, (DXGI_FORMAT)mesh.ibFormat});
+            // for (uint32_t i = 0; i < mesh.numDraws; ++i)
+            // {
+            //     //context.DrawIndexed(mesh.draw[i].primCount, mesh.draw[i].startIndex, mesh.draw[i].baseVertex);
+            //     std::cout << "checkMesh: primCount: " << mesh.draw[i].primCount<<std::endl;
+            //     std::cout << "checkMesh: startIndex: " << mesh.draw[i].startIndex<<std::endl;
+            //     std::cout << "checkMesh: baseVertex: " << mesh.draw[i].baseVertex<<std::endl;
+            //     std::cout << "checkMesh: vbOffset: " << mesh.vbOffset<<std::endl;
+            //     std::cout << "checkMesh: vbDepthOffset: " << mesh.vbDepthOffset<<std::endl;
+            //     std::cout << "checkMesh: numDraws: " << mesh.numDraws<<std::endl;
+            //     std::cout << "checkMesh: ibOffset " << mesh.ibOffset<<std::endl;
+            // }
 
-            for (uint32_t i = 0; i < mesh.numDraws; ++i)
-            {
-                context.DrawIndexed(mesh.draw[i].primCount, mesh.draw[i].startIndex, mesh.draw[i].baseVertex);
-            }
-
+            context.DrawIndexedInstanced(mesh.draw[0].primCount, manager.visibleBlockNumber, 0, 0, 0);
+            // context.DrawIndexedInstanced(36, ModelCount,0,0,1);
+            // context.DrawIndexedInstanced(36, 1,0,0,3);
             ++m_CurrentDraw;
         }
     }
@@ -858,6 +885,12 @@ void MeshSorter::RenderMeshes(
 {
     ASSERT(m_DSV != nullptr);
 
+    BlockResourceManager::InstancesManager& manager = BlockResourceManager::getManager(currentBlockType);
+    if (manager.visibleBlockNumber ==0)
+    {
+        return;
+    }
+    
     Renderer::UpdateGlobalDescriptors();
 
     context.SetRootSignature(m_RootSig);
@@ -922,6 +955,9 @@ void MeshSorter::RenderMeshes(
         }
     }
 
+    context.GetCommandList()->SetGraphicsRootShaderResourceView(kInstanceData,
+                                                                manager.InstanceBuffer->Resource()->
+                                                                        GetGPUVirtualAddress());
     for (; m_CurrentPass <= pass; m_CurrentPass = (DrawPass)(m_CurrentPass + 1))
     {
         const uint32_t passCount = m_PassCounts[m_CurrentPass];
@@ -996,9 +1032,9 @@ void MeshSorter::RenderMeshes(
 
             context.SetIndexBuffer({object.bufferPtr + mesh.ibOffset, mesh.ibSize, (DXGI_FORMAT)mesh.ibFormat});
 
-            for (uint32_t i = 0; i < mesh.numDraws; ++i)
-                context.DrawIndexed(mesh.draw[i].primCount, mesh.draw[i].startIndex, mesh.draw[i].baseVertex);
-
+            // for (uint32_t i = 0; i < mesh.numDraws; ++i)
+            //     context.DrawIndexed(mesh.draw[i].primCount, mesh.draw[i].startIndex, mesh.draw[i].baseVertex);
+            context.DrawIndexedInstanced(mesh.draw[0].primCount, manager.visibleBlockNumber, 0, 0, 0);
             ++m_CurrentDraw;
         }
     }

@@ -1,0 +1,11 @@
+Model Information:
+* title:	(Free) Buick Riviera Car
+* source:	https://sketchfab.com/3d-models/free-buick-riviera-car-670da1c2fd6c4aafb4c3f8f10ac9224c
+* author:	S24frames (https://sketchfab.com/sahandkarwan5)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "(Free) Buick Riviera Car" (https://sketchfab.com/3d-models/free-buick-riviera-car-670da1c2fd6c4aafb4c3f8f10ac9224c) by S24frames (https://sketchfab.com/sahandkarwan5) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

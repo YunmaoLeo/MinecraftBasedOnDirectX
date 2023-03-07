@@ -145,6 +145,7 @@ public:
     ModelInstance( const ModelInstance& modelInstance );
 
     ModelInstance& operator=( std::shared_ptr<const Model> sourceModel );
+    void UpdateTranslationSize();
 
     bool IsNull(void) const { return m_Model == nullptr; }
 
@@ -169,7 +170,7 @@ public:
     void UpdateAnimations(float deltaTime);
     void LoopAllAnimations(void);
     std::shared_ptr<const Model> m_Model;
-private:
+
     
     UploadBuffer m_MeshConstantsCPU;
     ByteAddressBuffer m_MeshConstantsGPU;
@@ -179,4 +180,5 @@ private:
     std::unique_ptr<GraphNode[]> m_AnimGraph;   // A copy of the scene graph when instancing animation
     std::vector<AnimationState> m_AnimState;    // Per-animation (not per-curve)
     std::unique_ptr<Joint[]> m_Skeleton;
+private:
 };

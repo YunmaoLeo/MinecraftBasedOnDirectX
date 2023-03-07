@@ -11,6 +11,7 @@
 // Author:  James Stanard
 //
 
+#include <complex>
 #include <iostream>
 
 #include "GameCore.h"
@@ -35,9 +36,12 @@
 #include "ShadowCamera.h"
 #include "Display.h"
 #include "LightManager.h"
+#include "SimplexNoise.h"
+#include "ThreadPool.h"
 #include "Blocks/BlockResourceManager.h"
+#include "World/WorldMap.h"
 #include "World/World.h"
-#include "World/WorldBlock.h"
+#include "World/Chunk.h"
 
 #define LEGACY_RENDERER
 
@@ -55,10 +59,15 @@ public:
     {
     }
 
+    void PickItem(int sx, int sy);
     virtual void Startup(void) override;
     virtual void Cleanup(void) override;
 
     virtual void Update(float deltaT) override;
+    void RenderBlocks(MeshSorter& sorter, MeshSorter::DrawPass pass, GraphicsContext& context,
+                      GlobalConstants& globals);
+    void RenderShadowBlocks(MeshSorter& sorter, MeshSorter::DrawPass pass, GraphicsContext& context,
+                            GlobalConstants& globals, Matrix4 matrix);
     virtual void RenderScene(void) override;
 
 private:
@@ -72,14 +81,14 @@ private:
     D3D12_RECT subScissor;
 
     ModelInstance m_ModelInst;
-    WorldBlock world_block;
+    Chunk world_block;
+    WorldMap* worldMap;
     ShadowCamera m_SunShadow;
 };
 
-
-NumVar ShadowDimX("Sponza/Lighting/Shadow Dim X", 5000, 1000, 10000, 100);
-NumVar ShadowDimY("Sponza/Lighting/Shadow Dim Y", 3000, 1000, 10000, 100);
-NumVar ShadowDimZ("Sponza/Lighting/Shadow Dim Z", 3000, 1000, 10000, 100);
+NumVar ShadowDimX("Sponza/Lighting/Shadow Dim X", 10000, 1000, 10000, 100);
+NumVar ShadowDimY("Sponza/Lighting/Shadow Dim Y", 10000, 1000, 10000, 100);
+NumVar ShadowDimZ("Sponza/Lighting/Shadow Dim Z", 10000, 1000, 10000, 100);
 CREATE_APPLICATION(ModelViewer)
 
 ExpVar g_SunLightIntensity("Viewer/Lighting/Sun Light Intensity", 4.0f, 0.0f, 16.0f, 0.1f);
@@ -139,6 +148,7 @@ void LoadIBLTextures()
             std::wstring specularFile = baseFile + L"_specularIBL.dds";
 
             TextureRef diffuseTex = TextureManager::LoadDDSFromFile(L"Textures/" + diffuseFile);
+            std::wcout <<"find skybox texture: "<< baseFile << std::endl;
             if (diffuseTex.IsValid())
             {
                 TextureRef specularTex = TextureManager::LoadDDSFromFile(L"Textures/" + specularFile);
@@ -159,9 +169,26 @@ void LoadIBLTextures()
         g_IBLSet.Increment();
 }
 
+int Chunk::blockId = 0;
+
+void ModelViewer::PickItem(int sx, int sy)
+{
+    Matrix4 P = m_Camera.GetProjMatrix();
+    float vx = (+2.0f*sx / g_SceneColorBuffer.GetWidth() - 1.0f) / P.GetX().GetX();
+    float vy = (-2.0f*sy / g_SceneColorBuffer.GetHeight() + 1.0f) / P.GetY().GetY();
+
+    XMVECTOR rayOrigin = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+    XMVECTOR rayDir = XMVectorSet(vx, vy, 1.0f, 0.0f);
+
+    XMMATRIX V = m_Camera.GetViewMatrix();
+    XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(V),V);
+}
+
 void ModelViewer::Startup(void)
 {
     // 初始化动态模糊
+    std::cout <<"Sizeof Block: " << sizeof(Block) << std::endl;
+    SimplexNoise::setSeed(20);
     MotionBlur::Enable = true;
 
     TemporalEffects::EnableTAA = true;
@@ -176,7 +203,6 @@ void ModelViewer::Startup(void)
 
     Renderer::Initialize();
     BlockResourceManager::initBlocks();
-
     LoadIBLTextures();
 
     std::wstring gltfFileName;
@@ -197,14 +223,15 @@ void ModelViewer::Startup(void)
     }
     else
     {
-        // Load Model
-        world_block = WorldBlock(Vector3(0, 0, 0), 15);
-        std::cout << "blockSize" << world_block.blocks.size() << std::endl;
+        worldMap = new WorldMap(27,16,2);
+        
+        // world_block = WorldBlock(Vector3(0, 0, 0), 16);
         MotionBlur::Enable = false;
         //Lighting::CreateRandomLights(m_ModelInst.m_Model->m_BoundingBox.GetMin(),m_ModelInst.m_Model->m_BoundingBox.GetMax());
     }
 
-    m_Camera.SetZRange(1.0f, 10000.0f);
+    m_Camera.SetZRange(1.0f, 15000.0f);
+    m_Camera.SetPosition({0,128.0f*World::UnitBlockSize, 0});
     if (gltfFileName.size() == 0)
     {
         m_CameraController.reset(new FlyingFPSCamera(m_Camera, Vector3(kYUnitVector)));
@@ -217,7 +244,7 @@ void ModelViewer::Startup(void)
 void ModelViewer::Cleanup(void)
 {
     m_ModelInst = nullptr;
-    world_block.CleanUp();
+    // world_block.CleanUp();
 
     g_IBLTextures.clear();
 
@@ -233,7 +260,7 @@ namespace Graphics
 void ModelViewer::Update(float deltaT)
 {
     ScopedTimer _prof(L"Update State");
-
+    
     if (GameInput::IsFirstPressed(GameInput::kLShoulder))
         DebugZoom.Decrement();
     else if (GameInput::IsFirstPressed(GameInput::kRShoulder))
@@ -241,9 +268,19 @@ void ModelViewer::Update(float deltaT)
 
     m_CameraController->Update(deltaT);
 
-    GraphicsContext& gfxContext = GraphicsContext::Begin(L"Scene Update");
+    Vector3 ori = m_Camera.GetPosition();
+    Vector3 dir = Normalize(m_Camera.GetForwardVec());
+    if (GameInput::IsFirstReleased(GameInput::kMouse0))
+    {
+        worldMap->DeleteBlock(ori,dir);
+    }
+    if (GameInput::IsFirstReleased(GameInput::kMouse1))
+    {
+        worldMap->PutBlock(ori,dir, Grass);
+    }
     
-    world_block.Update(gfxContext, deltaT);
+    
+    GraphicsContext& gfxContext = GraphicsContext::Begin(L"Scene Update");
 
     gfxContext.Finish();
 
@@ -282,13 +319,37 @@ void ModelViewer::Update(float deltaT)
     subScissor.bottom = (LONG)g_SceneColorBuffer.GetHeight();
 }
 
+void ModelViewer::RenderBlocks(MeshSorter& sorter, MeshSorter::DrawPass pass, GraphicsContext& context,
+                               GlobalConstants& globals)
+{
+    for (int i = 0; i < BlockResourceManager::BlockType::Air; i++)
+    {
+        auto type = static_cast<BlockResourceManager::BlockType>(i);
+        sorter.ClearMeshes();
+        sorter.currentBlockType = type;
+        BlockResourceManager::getBlockRef(type).Render(sorter);
+        sorter.Sort();
+        sorter.RenderMeshes(pass, context, globals);
+    }
+}
 
+void ModelViewer::RenderShadowBlocks(MeshSorter& sorter, MeshSorter::DrawPass pass, GraphicsContext& context,
+                                     GlobalConstants& globals, Matrix4 matrix)
+{
+    for (int i = 0; i < BlockResourceManager::BlockType::Air; i++)
+    {
+        auto type = static_cast<BlockResourceManager::BlockType>(i);
+        sorter.ClearMeshes();
+        sorter.currentBlockType = type;
+        BlockResourceManager::getBlockRef(type).Render(sorter);
+        sorter.Sort();
+        sorter.RenderMeshes(pass, context, globals, matrix);
+    }
+}
 
 void ModelViewer::RenderScene(void)
 {
-    std::cout << "start a render" << std::endl;
     GraphicsContext& gfxContext = GraphicsContext::Begin(L"Scene Render");
-
     uint32_t FrameIndex = TemporalEffects::GetFrameIndexMod2();
     const D3D12_VIEWPORT& viewport = m_MainViewport;
     const D3D12_RECT& scissor = m_MainScissor;
@@ -313,7 +374,7 @@ void ModelViewer::RenderScene(void)
     globals.CameraPos = m_Camera.GetPosition();
     globals.SunDirection = SunDirection;
     globals.SunIntensity = Vector3(Scalar(g_SunLightIntensity));
-
+    // world_block.CopyDepthBuffer(gfxContext);
     // Begin rendering depth
     gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
     gfxContext.ClearDepth(g_SceneDepthBuffer);
@@ -325,19 +386,14 @@ void ModelViewer::RenderScene(void)
     sorter.SetDepthStencilTarget(g_SceneDepthBuffer);
     sorter.AddRenderTarget(g_SceneColorBuffer);
 
-    // m_ModelInst.Render(sorter);
     {
-        ScopedTimer _BlocksRenderProf(L"BlocksRenderToSorter", gfxContext);
-        world_block.Render(sorter, m_Camera, gfxContext);
+        ScopedTimer _prof(L"renderVisibleBlocksInCPU", gfxContext);
+        worldMap->renderVisibleBlocks(m_Camera, gfxContext);
     }
 
     {
-        ScopedTimer _sortProf(L"Sorter sorts", gfxContext);
-        sorter.Sort();
-    }
-    {
         ScopedTimer _prof(L"Depth Pre-Pass", gfxContext);
-        sorter.RenderMeshes(MeshSorter::kZPass, gfxContext, globals);
+        RenderBlocks(sorter, MeshSorter::kZPass, gfxContext, globals);
     }
 
     SSAO::Render(gfxContext, m_Camera);
@@ -345,22 +401,13 @@ void ModelViewer::RenderScene(void)
     {
         ScopedTimer _outerprof(L"Main Render", gfxContext);
 
-        // {
-        //     ScopedTimer _prof(L"Sun Shadow Map", gfxContext);
-        //
-        //     MeshSorter shadowSorter(MeshSorter::kShadows);
-        //     shadowSorter.SetCamera(m_Camera);
-        //     shadowSorter.SetDepthStencilTarget(g_ShadowBuffer);
-        //
-        //     // m_ModelInst.Render(shadowSorter);
-        //     world_block.Render(shadowSorter, m_Camera);
-        //
-        //     shadowSorter.Sort();
-        //
-        //     shadowSorter.RenderMeshes(MeshSorter::kZPass, gfxContext, globals, m_SunShadow.GetViewProjMatrix());
-        // }
-
-        {
+        {   
+            ScopedTimer _prof(L"Sun Shadow Map", gfxContext);
+        
+            MeshSorter shadowSorter(MeshSorter::kShadows);
+            shadowSorter.SetCamera(m_Camera);
+            shadowSorter.SetDepthStencilTarget(g_ShadowBuffer);
+            RenderShadowBlocks(shadowSorter, MeshSorter::kZPass, gfxContext, globals, m_SunShadow.GetViewProjMatrix());
         }
 
         gfxContext.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
@@ -372,17 +419,15 @@ void ModelViewer::RenderScene(void)
             gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_READ);
             gfxContext.SetRenderTarget(g_SceneColorBuffer.GetRTV(), g_SceneDepthBuffer.GetDSV_DepthReadOnly());
             gfxContext.SetViewportAndScissor(viewport, scissor);
-            
-            sorter.RenderMeshes(MeshSorter::kOpaque, gfxContext, globals);
+
+            RenderBlocks(sorter, MeshSorter::kOpaque, gfxContext, globals);
         }
 
         Renderer::DrawSkybox(gfxContext, m_Camera, viewport, scissor);
-        //
-         sorter.RenderMeshes(MeshSorter::kTransparent, gfxContext, globals);
+        
+        RenderBlocks(sorter, MeshSorter::kTransparent, gfxContext, globals);
     }
-    //
-    world_block.CheckOcclusion(sorter, gfxContext, globals);
-
+    gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_COPY_SOURCE);
     // Some systems generate a per-pixel velocity buffer to better track dynamic and skinned meshes.  Everything
     // is static in our scene, so we generate velocity from camera motion and the depth buffer.  A velocity buffer
     // is necessary for all temporal effects (and motion blur).
@@ -391,8 +436,7 @@ void ModelViewer::RenderScene(void)
     TemporalEffects::ResolveImage(gfxContext);
 
     //ParticleEffectManager::Render(gfxContext, m_Camera, g_SceneColorBuffer, g_SceneDepthBuffer,  g_LinearDepth[FrameIndex]);
-
-    // Until I work out how to couple these two, it's "either-or".
+    
     if (DepthOfField::Enable)
         DepthOfField::Render(gfxContext, m_Camera.GetNearClip(), m_Camera.GetFarClip());
     else

@@ -2,45 +2,40 @@
 #include "BlockResourceManager.h"
 #include "Math/Vector.h"
 
-class WorldBlock;
+class Chunk;
 
 class Block
 {
-    friend WorldBlock;
+    friend Chunk;
 
 public:
-    Block(Math::Vector3& position, BlockResourceManager::BlockType type, float radius);
 
     Block()
     {
     }
 
+    Block(Math::Vector3& position, BlockResourceManager::BlockType type, float sideSize);
     Block& operator=(const Block& block);
 
 
-    void Update(GraphicsContext& gfxContext, float deltaT);
-
-    void Render(Renderer::MeshSorter& sorter);
-    void CleanUp();
-
-    bool IsNull() const
-    {
-        return model.IsNull();
-    }
+    void Update(float deltaT);
+    void ClearUp();
 
     bool isTransparent() const
     {
         return transparent;
     }
 
-
-    float radius;
-    bool isDirt = true;
-    bool transparent = false;
-    bool adjacent2OuterAir = false;
-    Math::Vector3 position;
+    bool IsNull();
+    
+    Math::Vector3 position{};
+    float sideSize=0;
+    float radius=0;
     BlockResourceManager::BlockType blockType;
-    ModelInstance model;
+    bool hasCheckSibling = false;
+    bool isEdgeBlock = false;
+    bool transparent = false;
+    bool adjacent2Air = false;
 
 private:
 };
