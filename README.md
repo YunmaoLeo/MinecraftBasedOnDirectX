@@ -103,7 +103,7 @@ int height = SURFACE_HEIGHT + (noise+1)/2 * (128);
 **(线性插值的具体数值自己定义即可，不同的插值会带来天翻地覆的效果变化，这也是最有趣的部分)**
 ![image.png](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/6c5174557af44c279c7ddcdaf40b76c7~tplv-k3u1fbpfcp-watermark.image?=512x384)
 
-+ 添加侵蚀噪声后，我们的获得了如下的地形：
++ 添加侵蚀噪声后，我们获得了如下的地形：
 ![1678198249602.jpg](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/08139f2509514bbf9afae9f3d2c90256~tplv-k3u1fbpfcp-watermark.image?=512x384)
     + 对比单纯使用大陆板块噪声，我们的新地形拥有了切割山地和高原的能力，因而高原上出现了山脉，高原和山地，山地和平原之间的过渡也更自然了。
     
@@ -116,8 +116,103 @@ int height = SURFACE_HEIGHT + (noise+1)/2 * (128);
 + 对我们的地形生成应用波谷起伏噪声，就可获得如下效果：
 ![1678199198629.jpg](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/efc3a80d05024f0aafa5c89129c37dfb~tplv-k3u1fbpfcp-watermark.image?=512x384)
 新的地形效果与此前的并不会有显著差异，但这帮助我们在平面区域/斜面区域都拥有了更自然的过渡。
-# Git链接
+
+### 地形生成完成
+基于以上三个噪声及其对应线性插值的组合使用，我们已经能够创造出一个相当丰富精彩的地貌了；  
++ 总结三个噪声及其对应的核心作用：
+1. **大陆板块噪声**：用于定义一个单位格是陆地还是海洋，如果是陆地，那么赋予其一个初始高度
+2. **侵蚀噪声**：用于对原有的平原、山地、高原进行侵蚀，雕琢掉过于平滑的平面/斜面，形成更自然的地形间过渡和更丰富的地形效果。 
+3. **波谷起伏噪声**：影响能力最小，起伏频率最高，仅用于让一些过于平滑的区域拥有更自然的效果。
+
++ 对上述三个噪声的参数、线性插值进行调整，可以实现我们想要的大部分效果，例如：
+5. 如果我们希望平原的面积更大，高原的面积更小，只需要在大陆板块噪声的线性插值进行调整，增加平原高度所占的noise区间大小即可。
+6. 如果我们希望不同的高度板块占的面积更大，只需要调小大陆板块噪声的frequency，减小起伏的频率，也就让每一种不同的版块有了更大的面积。
+7. 如果我们希望拥有险峻的峡谷和悬崖，只需要在侵蚀噪声的线性插值中，添加一段陡峭的下凹陷即可，让处在这区间的板块快速挖去一块，形成峡谷和悬崖效果。
+
+## 2. 地表气候生成
+### 基于温湿度创建气候属性
++ 一章节同理，我们利用SimplexNoise生成世界的温度、湿度图，接着我们可以根据以下几个因素设定气候:
+    1. 温度
+    2. 湿度
+    3. 基础海拔（利用大陆板块噪声值及其线性插值可得--海洋、平原、高原等
++ 气候生成示例：
+    + 例如极高温，低湿度的场景我们可以设定为沙漠
+    + 近海、温度湿度适宜的低海拔地区设置为温带树林
+    + 温度低的高山区域设置为雪山/雪树林
+    + ...
++ 我们给每种气候设置核心属性
+    + 地表方块类型：草地/雪地/枯草地
+    + 地表植被密度
+    + 地表植被群数组：例如沙漠有仙人掌，温带树林有白桦木、橡树等
+
+### 将气候应用在基础地形上
++ 在步骤1中获取了基础地形后，我们获得了由石头组成的世界，我们依次执行以下步骤：
+    + 根据气候，替换地表的N层石头为气候对应的地表方块
+    + 将低于海平面高度的空方块设置为水
+    + 添加植被（树木、草地）
+
+![image.png](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/e8046e3945b1437193952a2554254c3d~tplv-k3u1fbpfcp-watermark.image?)
+
+# 总结
++ 至此，我们拥有了一个地貌样式变化丰富，可自定义程度高的地图生成框架，基于此，我们可以添加利用噪声或是其他算法添加地底洞穴、悬崖峭壁、村庄群落、动物群落等完善游戏内容。
++ 然而，由于地图是在游戏进行过程中及时计算、加载的，如果我们希望实现一个随机数种子对应一个唯一的地图，使用多线程并发计算不同地图区块就可以会带来地图生成不幂等不一致的缺陷。
+
+
+
+# 项目代码
 [YunmaoLeo/MinecraftBasedOnDirectX](https://github.com/YunmaoLeo/MinecraftBasedOnDirectX)
+## USE GUIDE：
+0. Clone代码库，切换到master分支
+1. 使用Rider或VisualStudio打开ModelViewer.sln项目
+2. 同屏展示的世界大小设置
+    + ModelViewer.cpp中，设定worldMap = new WorldMap(同屏区块数, 区块尺寸, 线程数)
+3. 地图生成的参数设定
+    + 进入WorldGenerator.cpp
+    + 在最上方的各个不同的噪声初始化的区域设置他们的参数
+    + 设置每个不同的噪声对应的线性插值定义
+    + 设置不同气候对应的地表方块类型，植被密度等
+    + 设置各项属性值对应的气候，见getRealHeightAndBiomes()
+```
+//不同噪音对应的SimplexNoise
+SimplexNoise continent(0.05, 1, 2, 0.5);
+SimplexNoise erosion(0.1, 1, 2, 0.5);
+SimplexNoise peaksValleys(0.5, 1, 2, 0.5);
+SimplexNoise temperature(0.01, 1, 2, 0.5);
+SimplexNoise humidity(0.01, 1, 2, 0.5);
+SimplexNoise caves(0.8, 1, 2, 0.5);
+
+//不同气候的初始设置
+Biomes BarrenIceField(GrassSnow, Dirt, 7, 0.01, 20, 1);
+Biomes InlandForest(GrassWilt, Dirt, 7, 0.01, 15, 1);
+Biomes InlandPlain(GrassWilt, Dirt, 7, 0.05, 0,0);
+Biomes Desert(Sand, Sand, 12, 0, 0, 0);
+Biomes FlourishIceField(GrassSnow, Dirt, 9, 0.05, 15, 1);
+Biomes Forest(Grass, Dirt, 8, 0.05, 6, 1);
+Biomes RainForest(Grass, Dirt, 12, 0.10, 15, 2);
+Biomes Savanna(Grass, Dirt, 12, 0.1, 0, 0);
+
+//三种地形生成噪音对应的插值定义
+std::map<float, float> ContinentalnessNodes = {
+    {-1.0, ANOTHER_HEIGHT},
+    {-0.5, ANOTHER_HEIGHT},
+    ...
+};
+
+std::map<float, float> ErosionNodes = {
+    {-1.0, 15},
+    {-0.7, 10},
+    ...
+};
+
+std::map<float, float> PeakValleysNodes = {
+    {-1.0, -4},
+    {-0.8, -3},
+    ...
+};
+```
+
+4. 切换至release模式，编译项目并运行
+5. 默认情况下只渲染与空气毗邻的方块，可以通过左键删除方块，右键添加一个草方块来执行一些简单的操作。
 # 资料参考
 [The World Generation of Minecraft - Alan Zucconi](https://www.alanzucconi.com/2022/06/05/minecraft-world-generation/)
 
